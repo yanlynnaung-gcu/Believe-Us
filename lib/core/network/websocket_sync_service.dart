@@ -50,6 +50,35 @@ class WebSocketSyncService {
     return _eventController.stream.where((e) => e.event == eventType);
   }
 
+  /// Simulation hook for testing incoming WebSocket/STOMP events
+  @visibleForTesting
+  void simulateIncomingEvent(WebSocketEvent event) {
+    _eventController.add(event);
+  }
+
+  void sendEvent({
+    required String event,
+    required Map<String, dynamic> data,
+    String? topic,
+  }) {
+    if (_channel != null) {
+      try {
+        final payload = jsonEncode({
+          'action': 'EVENT',
+          'event': event,
+          'coupleSpaceId': _currentCoupleSpaceId ?? '',
+          'senderId': _currentUserId ?? '',
+          'topic': topic ?? '/topic/couple.${_currentCoupleSpaceId ?? ""}.status',
+          'data': data,
+        });
+        _channel!.sink.add(payload);
+        debugPrint('[WebSocket] Sent event $event: $payload');
+      } catch (e) {
+        debugPrint('[WebSocket] Send event error: $e');
+      }
+    }
+  }
+
   void updateCredentials({required String? userId, required String? coupleSpaceId}) {
     final changed = _currentUserId != userId || _currentCoupleSpaceId != coupleSpaceId;
     _currentUserId = userId;
@@ -73,6 +102,9 @@ class WebSocketSyncService {
       debugPrint('[WebSocket] Connecting to $uri (Attempt $_reconnectAttempts) ...');
 
       _channel = WebSocketChannel.connect(uri);
+      _channel?.ready.catchError((error) {
+        debugPrint('[WebSocket] Handshake Error: $error');
+      });
 
       _subscription = _channel!.stream.listen(
         (data) {

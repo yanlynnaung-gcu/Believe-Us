@@ -42,7 +42,7 @@ final class CoupleMediaControllerProvider
 }
 
 String _$coupleMediaControllerHash() =>
-    r'3ca661b1b5b549110c5adb99b8f7a4b1d09dcc86';
+    r'2d741d65606a15f492000c2dd2f49245896bc086';
 
 abstract class _$CoupleMediaController extends $Notifier<CoupleMediaState> {
   CoupleMediaState build();

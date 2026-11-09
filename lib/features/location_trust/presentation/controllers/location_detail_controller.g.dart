@@ -136,7 +136,7 @@ final class LocationDetailControllerProvider
 }
 
 String _$locationDetailControllerHash() =>
-    r'5c2ec18a0245c33e16f75a9e95820a206d08b0b4';
+    r'2a8e830610ea0eadaddab7f7b971c884e18682bf';
 
 abstract class _$LocationDetailController
     extends $Notifier<LocationDetailState> {

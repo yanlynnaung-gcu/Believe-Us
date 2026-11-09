@@ -25,8 +25,8 @@ class UnreadMessagesNotifier extends Notifier<int> {
       _readSub?.cancel();
     });
 
-    if (user != null) {
-      final spaceId = user.coupleSpaceId ?? 'space_demo';
+    if (user != null && user.coupleSpaceId != null && user.coupleSpaceId!.isNotEmpty) {
+      final spaceId = user.coupleSpaceId!;
       final userId = user.id;
 
       // 1. Initial count from backend / repository
@@ -78,11 +78,11 @@ class UnreadMessagesNotifier extends Notifier<int> {
   Future<void> markAsRead() async {
     state = 0;
     final user = ref.read(authStateProvider);
-    if (user == null) return;
+    if (user == null || user.coupleSpaceId == null) return;
 
     final chatRepo = ref.read(chatRepositoryProvider);
     await chatRepo.markMessagesAsRead(
-      coupleSpaceId: user.coupleSpaceId ?? 'space_demo',
+      coupleSpaceId: user.coupleSpaceId!,
       receiverId: user.id,
     );
   }

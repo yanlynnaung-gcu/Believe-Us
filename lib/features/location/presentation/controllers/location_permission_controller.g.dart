@@ -43,7 +43,7 @@ final class LocationPermissionControllerProvider
 }
 
 String _$locationPermissionControllerHash() =>
-    r'a9cb9c23bcab8401ea4e50f435876684d1b20d73';
+    r'9338d9a6f35ea857a4ae77239150d0267225be41';
 
 abstract class _$LocationPermissionController extends $Notifier<bool> {
   bool build();

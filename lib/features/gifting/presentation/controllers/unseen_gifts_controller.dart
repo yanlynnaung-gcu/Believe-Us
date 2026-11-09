@@ -22,8 +22,8 @@ class UnseenGiftsNotifier extends Notifier<int> {
       _giftSeenSub?.cancel();
     });
 
-    if (user != null) {
-      final spaceId = user.coupleSpaceId ?? 'space_demo';
+    if (user != null && user.coupleSpaceId != null && user.coupleSpaceId!.isNotEmpty) {
+      final spaceId = user.coupleSpaceId!;
       final userId = user.id;
 
       // 1. Initial count from backend
@@ -65,11 +65,11 @@ class UnseenGiftsNotifier extends Notifier<int> {
   Future<void> markGiftsAsSeen() async {
     state = 0;
     final user = ref.read(authStateProvider);
-    if (user == null) return;
+    if (user == null || user.coupleSpaceId == null) return;
 
     final repo = ref.read(giftingRepositoryProvider);
     await repo.markGiftsAsSeen(
-      coupleSpaceId: user.coupleSpaceId ?? 'space_demo',
+      coupleSpaceId: user.coupleSpaceId!,
       receiverId: user.id,
     );
   }

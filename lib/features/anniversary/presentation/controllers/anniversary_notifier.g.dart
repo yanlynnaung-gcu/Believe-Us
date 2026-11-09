@@ -42,7 +42,7 @@ final class AnniversaryNotifierProvider
 }
 
 String _$anniversaryNotifierHash() =>
-    r'ebfe7b2d2558749fc45b5844dc306b10b87d2ca5';
+    r'31fb1350ab87fef8e76e5fda51c0f5803fd68692';
 
 abstract class _$AnniversaryNotifier extends $Notifier<AnniversaryEngineState> {
   AnniversaryEngineState build();

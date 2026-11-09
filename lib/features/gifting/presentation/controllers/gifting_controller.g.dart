@@ -41,7 +41,7 @@ final class GiftingControllerProvider
   }
 }
 
-String _$giftingControllerHash() => r'05749b7078181a3937a61b42fdd217f7261a1189';
+String _$giftingControllerHash() => r'056491d95c55f7240e1a34e7aa94c4503885c713';
 
 abstract class _$GiftingController extends $Notifier<GiftingUIState> {
   GiftingUIState build();

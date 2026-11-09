@@ -11,6 +11,7 @@ class ApiEndpoints {
   /// Detected MacBook LAN IP on local Wi-Fi
   static const String defaultLanIp = '192.168.1.6';
   static const int defaultPort = 8080;
+  static const int defaultMqttPort = 1883;
 
   /// Resolves the host for API & WebSocket:
   /// 1. `--dart-define=API_HOST=<LAN_IP>` (Explicit override)
@@ -30,6 +31,22 @@ class ApiEndpoints {
       return int.tryParse(customPort) ?? defaultPort;
     }
     return defaultPort;
+  }
+
+  static int get mqttPort {
+    const customMqttPort = String.fromEnvironment('MQTT_PORT');
+    if (customMqttPort.isNotEmpty) {
+      return int.tryParse(customMqttPort) ?? defaultMqttPort;
+    }
+    return defaultMqttPort;
+  }
+
+  static String get mqttBrokerHost {
+    const customMqttHost = String.fromEnvironment('MQTT_HOST');
+    if (customMqttHost.isNotEmpty) {
+      return customMqttHost;
+    }
+    return host;
   }
 
   static String get baseUrl {
@@ -63,6 +80,7 @@ class ApiEndpoints {
   static const String heartbeatPath = '/api/v1/location/heartbeat';
   static const String nudgePath = '/api/v1/location/nudge';
   static const String latestLocationPath = '/api/v1/location/latest';
+  static const String emergencyPath = '/api/v1/couple/emergency';
 
   // 1-to-1 Couple Pairing endpoints
   static const String pairingCodePath = '/api/v1/pairing/code';
@@ -204,7 +222,7 @@ Dio dioClient(Ref ref) {
     final storage = ref.watch(localStorageServiceProvider);
     dio.interceptors.add(JwtAuthInterceptor(storage));
   } catch (_) {
-    // In unit test environments where storage provider may not be mocked
+    // Fallback when storage provider is not initialized
   }
 
   // 2. Exponential Backoff Auto-Retry on network failures/server restarts

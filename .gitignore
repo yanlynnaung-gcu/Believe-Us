@@ -44,7 +44,19 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Spring Boot Backend Build Files
+# Spring Boot Backend Build Files & Database Artifacts
 backend/**/target/
 backend/**/.mvn/
 backend/**/*.log
+backend/**/data/
+backend/**/uploads/
+backend/**/.moquette*
+data/
+uploads/
+*.db
+*.mv.db
+.neon
+node_modules/
+.env
+.env.*
+.env.local

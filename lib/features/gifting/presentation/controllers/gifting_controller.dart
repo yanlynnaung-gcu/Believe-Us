@@ -55,14 +55,21 @@ class GiftingController extends _$GiftingController {
       return null;
     }
 
+    final partnerId = user.partnerId;
+    final coupleSpaceId = user.coupleSpaceId;
+    if (partnerId == null || coupleSpaceId == null) {
+      state = state.copyWith(errorMessage: 'Please pair with your partner before sending gifts.');
+      return null;
+    }
+
     final amount = customAmountMmK ?? package.amountMmK;
     state = state.copyWith(isProcessing: true, clearError: true);
 
     final giftingRepo = ref.read(giftingRepositoryProvider);
     final result = await giftingRepo.initiateAndVerifyPayment(
       senderId: user.id,
-      receiverId: user.partnerId ?? 'usr_partner_demo',
-      coupleSpaceId: user.coupleSpaceId ?? 'space_demo',
+      receiverId: partnerId,
+      coupleSpaceId: coupleSpaceId,
       packageTitle: package.title,
       amountMmK: amount,
       provider: provider,
@@ -85,8 +92,8 @@ class GiftingController extends _$GiftingController {
 
         await chatRepo.sendGiftMessage(
           senderId: user.id,
-          receiverId: user.partnerId ?? 'usr_partner_demo',
-          coupleSpaceId: user.coupleSpaceId ?? 'space_demo',
+          receiverId: partnerId,
+          coupleSpaceId: coupleSpaceId,
           giftData: {
             'transactionId': transaction.id,
             'transactionRef': transaction.transactionRef,

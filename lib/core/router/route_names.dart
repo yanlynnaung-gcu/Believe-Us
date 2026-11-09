@@ -11,4 +11,7 @@ abstract final class AppRoutes {
   static const locationDetails = '/location-details';
   static const gifting = '/gifting';
   static const anniversary = '/anniversary';
+  static const settings = '/settings';
+  static const contactUs = '/contact-us';
+  static const emergencyAlarm = '/emergency-alarm';
 }

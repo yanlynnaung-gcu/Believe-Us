@@ -25,7 +25,6 @@ class ChatRepositoryImpl implements ChatRepository {
   ChatRepositoryImpl({Dio? dio, WebSocketSyncService? ws})
       : _dio = dio ?? Dio(),
         _ws = ws ?? WebSocketSyncService() {
-    _seedInitialMessages();
     _initWsListener();
   }
 
@@ -47,39 +46,6 @@ class ChatRepositoryImpl implements ChatRepository {
     if (!list.any((m) => m.id == msg.id)) {
       list.add(msg);
       _chatStreamController.add(list);
-    }
-  }
-
-  void _seedInitialMessages() {
-    if (_messagesStore.isEmpty) {
-      final now = DateTime.now();
-      const defaultSpaceId = 'space_demo';
-      _messagesStore[defaultSpaceId] = [
-        ChatMessage(
-          id: 'msg_seed_1',
-          senderId: 'usr_partner_demo',
-          receiverId: 'usr_me',
-          coupleSpaceId: defaultSpaceId,
-          type: MessageType.text,
-          text: 'Good morning my love! I miss you so much today ❤️',
-          createdAt: now.subtract(const Duration(hours: 2)),
-          isRead: true,
-        ),
-        ChatMessage(
-          id: 'msg_seed_2',
-          senderId: 'usr_partner_demo',
-          receiverId: 'usr_me',
-          coupleSpaceId: defaultSpaceId,
-          type: MessageType.voice,
-          audioDurationSeconds: 6,
-          waveformSamples: [
-            0.3, 0.5, 0.8, 0.9, 0.6, 0.7, 0.4, 0.9, 1.0, 0.7, 0.5, 0.6, 0.3,
-            0.5, 0.8, 0.9, 0.7, 0.4, 0.6, 0.5, 0.3, 0.2, 0.4, 0.2,
-          ],
-          createdAt: now.subtract(const Duration(hours: 1)),
-          isRead: true,
-        ),
-      ];
     }
   }
 

@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 import 'package:thae_nge_lay/core/network/api_client.dart';
@@ -107,60 +106,37 @@ class GiftingRemoteDataSourceImpl implements GiftingRemoteDataSource {
     required PaymentProvider provider,
     required String note,
   }) async {
-    final randomDigits = 100000 + Random().nextInt(900000);
-    final prefix = provider == PaymentProvider.kbzPay ? 'KBZ' : 'WAVE';
-    final fallbackRef = '$prefix-$randomDigits';
-
-    // 1. Send to Spring Boot Backend
-    try {
-      final response = await _dio.post(
-        ApiEndpoints.giftingPayPath,
-        data: {
-          'senderId': senderId,
-          'receiverId': receiverId,
-          'coupleSpaceId': coupleSpaceId,
-          'packageTitle': packageTitle,
-          'amountMmK': amountMmK,
-          'provider': provider == PaymentProvider.kbzPay ? 'KBZPAY' : 'WAVEPAY',
-          'note': note,
-        },
-      );
-      if (response.statusCode == 200 && response.data != null) {
-        final data = response.data;
-        return GiftTransaction(
-          id: data['id']?.toString() ?? 'tx_${_uuid.v4().substring(0, 8)}',
-          senderId: senderId,
-          receiverId: receiverId,
-          coupleSpaceId: coupleSpaceId,
-          packageTitle: packageTitle,
-          amountMmK: amountMmK,
-          provider: provider,
-          note: note.isNotEmpty ? note : 'Sending love across the miles ❤️',
-          status: TransactionStatus.completed,
-          transactionRef: data['transactionRef']?.toString() ?? fallbackRef,
-          createdAt: DateTime.now(),
-        );
-      }
-    } catch (_) {}
-
-    // 2. Local Fallback (Simulation)
-    await Future.delayed(const Duration(milliseconds: 600));
-
-    final transaction = GiftTransaction(
-      id: 'tx_${_uuid.v4().substring(0, 8)}',
-      senderId: senderId,
-      receiverId: receiverId,
-      coupleSpaceId: coupleSpaceId,
-      packageTitle: packageTitle,
-      amountMmK: amountMmK,
-      provider: provider,
-      note: note.isNotEmpty ? note : 'Sending love across the miles ❤️',
-      status: TransactionStatus.completed,
-      transactionRef: fallbackRef,
-      createdAt: DateTime.now(),
+    final response = await _dio.post(
+      ApiEndpoints.giftingPayPath,
+      data: {
+        'senderId': senderId,
+        'receiverId': receiverId,
+        'coupleSpaceId': coupleSpaceId,
+        'packageTitle': packageTitle,
+        'amountMmK': amountMmK,
+        'provider': provider == PaymentProvider.kbzPay ? 'KBZPAY' : 'WAVEPAY',
+        'note': note,
+      },
     );
-
-    return transaction;
+    if (response.statusCode == 200 && response.data != null) {
+      final data = response.data;
+      final prefix = provider == PaymentProvider.kbzPay ? 'KBZ' : 'WAVE';
+      final fallbackRef = '$prefix-${DateTime.now().millisecondsSinceEpoch % 1000000}';
+      return GiftTransaction(
+        id: data['id']?.toString() ?? 'tx_${_uuid.v4().substring(0, 8)}',
+        senderId: senderId,
+        receiverId: receiverId,
+        coupleSpaceId: coupleSpaceId,
+        packageTitle: packageTitle,
+        amountMmK: amountMmK,
+        provider: provider,
+        note: note.isNotEmpty ? note : 'Sending love across the miles ❤️',
+        status: TransactionStatus.completed,
+        transactionRef: data['transactionRef']?.toString() ?? fallbackRef,
+        createdAt: DateTime.now(),
+      );
+    }
+    throw Exception('Failed to process gift payment: Unexpected server response.');
   }
 
   @override

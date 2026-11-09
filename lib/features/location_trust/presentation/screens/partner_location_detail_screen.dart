@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -23,9 +23,12 @@ class PartnerLocationDetailScreen extends ConsumerStatefulWidget {
 
 class _PartnerLocationDetailScreenState
     extends ConsumerState<PartnerLocationDetailScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   GoogleMapController? _mapController;
   late TabController _tabController;
+  late DraggableScrollableController _sheetController;
+  late AnimationController _pulseController;
+  bool _isSheetMinimized = false;
   final bool _useGoogleMaps = true;
 
   // Soft pastel custom map styling JSON
@@ -45,13 +48,47 @@ class _PartnerLocationDetailScreenState
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+    _sheetController = DraggableScrollableController();
+    _sheetController.addListener(() {
+      if (_sheetController.isAttached) {
+        final isMin = _sheetController.size <= 0.15;
+        if (isMin != _isSheetMinimized) {
+          setState(() => _isSheetMinimized = isMin);
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    _pulseController.dispose();
     _mapController?.dispose();
     _tabController.dispose();
+    _sheetController.dispose();
     super.dispose();
+  }
+
+  void _toggleSheet() {
+    HapticFeedback.lightImpact();
+    if (_sheetController.isAttached) {
+      if (_sheetController.size > 0.15) {
+        _sheetController.animateTo(
+          0.08,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        _sheetController.animateTo(
+          0.45,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
   }
 
   void _centerOnPartner(double lat, double lng) {
@@ -336,40 +373,46 @@ class _PartnerLocationDetailScreenState
                   ),
                 ),
                 SizedBox(width: 12.w),
-                Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(20.r),
-                    border: Border.all(color: BelieveColors.glassBorder),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        blurRadius: 10,
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 8.w,
-                        height: 8.w,
-                        decoration: const BoxDecoration(
-                          color: BelieveColors.success,
-                          shape: BoxShape.circle,
+                Expanded(
+                  child: Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(20.r),
+                      border: Border.all(color: BelieveColors.glassBorder),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 10,
                         ),
-                      ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        '${state.partnerName}\'s Safe Haven ✨',
-                        style: GoogleFonts.playfairDisplay(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w700,
-                          color: BelieveColors.textPrimary,
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 8.w,
+                          height: 8.w,
+                          decoration: const BoxDecoration(
+                            color: BelieveColors.success,
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
-                    ],
+                        SizedBox(width: 8.w),
+                        Expanded(
+                          child: Text(
+                            '${state.partnerName}\'s Safe Haven ✨',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.playfairDisplay(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w700,
+                              color: BelieveColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -417,6 +460,18 @@ class _PartnerLocationDetailScreenState
                     state.partnerLongitude,
                   ),
                 ),
+                SizedBox(height: 10.h),
+                // Toggle Bottom Sheet / Full Map
+                _buildMapControlBtn(
+                  icon: _isSheetMinimized
+                      ? LucideIcons.panelBottomOpen
+                      : LucideIcons.panelBottomClose,
+                  tooltip: _isSheetMinimized
+                      ? 'Show Arrival Logs'
+                      : 'Full Screen Map',
+                  color: BelieveColors.textPrimary,
+                  onTap: _toggleSheet,
+                ),
               ],
             ),
           ),
@@ -459,19 +514,14 @@ class _PartnerLocationDetailScreenState
             ),
           ),
 
-          // 2. LIVE PARTNER STATUS CARD (Floating right above the bottom sheet)
-          Positioned(
-            top: 0.38.sh,
-            left: 16.w,
-            right: 16.w,
-            child: _buildLiveStatusCard(context, state),
-          ),
-
-          // 3. DRAGGABLE BOTTOM SHEET (Today's Arrival Log & Trusted Places)
+          // 3. DRAGGABLE & DISMISSIBLE BOTTOM SHEET (Today's Arrival Log & Trusted Places)
           DraggableScrollableSheet(
-            initialChildSize: 0.42,
-            minChildSize: 0.38,
+            controller: _sheetController,
+            initialChildSize: 0.45,
+            minChildSize: 0.08,
             maxChildSize: 0.88,
+            snap: true,
+            snapSizes: const [0.08, 0.45, 0.88],
             builder: (context, scrollController) {
               return Container(
                 decoration: BoxDecoration(
@@ -489,17 +539,103 @@ class _PartnerLocationDetailScreenState
                 ),
                 child: Column(
                   children: [
-                    // Sheet Handle
-                    SizedBox(height: 12.h),
-                    Container(
-                      width: 44.w,
-                      height: 4.h,
-                      decoration: BoxDecoration(
-                        color: BelieveColors.border,
-                        borderRadius: BorderRadius.circular(2.r),
+                    // Sheet Handle with tap to minimize/expand
+                    GestureDetector(
+                      onTap: _toggleSheet,
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          vertical: 10.h,
+                          horizontal: 20.w,
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 44.w,
+                              height: 4.h,
+                              decoration: BoxDecoration(
+                                color: BelieveColors.border,
+                                borderRadius: BorderRadius.circular(2.r),
+                              ),
+                            ),
+                            SizedBox(height: 8.h),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        LucideIcons.history,
+                                        size: 15,
+                                        color: BelieveColors.primary,
+                                      ),
+                                      SizedBox(width: 8.w),
+                                      Expanded(
+                                        child: Text(
+                                          'Today\'s Arrival Log & Places',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 12.sp,
+                                            fontWeight: FontWeight.w800,
+                                            color: BelieveColors.textPrimary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(width: 8.w),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8.w,
+                                        vertical: 2.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: BelieveColors.primarySoft,
+                                        borderRadius:
+                                            BorderRadius.circular(10.r),
+                                      ),
+                                      child: Text(
+                                        '${state.todayArrivalLogs.length} events',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 10.sp,
+                                          fontWeight: FontWeight.w700,
+                                          color: BelieveColors.burgundy,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 6.w),
+                                    Icon(
+                                      _isSheetMinimized
+                                          ? LucideIcons.chevronUp
+                                          : LucideIcons.chevronDown,
+                                      size: 16,
+                                      color: BelieveColors.textMuted,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    SizedBox(height: 12.h),
+
+                    // Live Status Card (slides with sheet!)
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16.w,
+                        vertical: 4.h,
+                      ),
+                      child: _buildLiveStatusCard(context, state),
+                    ),
+
+                    SizedBox(height: 6.h),
 
                     // Sheet Tabs
                     Container(
@@ -528,7 +664,7 @@ class _PartnerLocationDetailScreenState
                       ),
                     ),
 
-                    SizedBox(height: 12.h),
+                    SizedBox(height: 10.h),
 
                     // Tab Views
                     Expanded(
@@ -559,24 +695,31 @@ class _PartnerLocationDetailScreenState
     required Color color,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 44.w,
-        height: 44.w,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.95),
-          shape: BoxShape.circle,
-          border: Border.all(color: BelieveColors.glassBorder),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.25),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+    return Material(
+      color: Colors.white,
+      shape: const CircleBorder(),
+      elevation: 5,
+      shadowColor: color.withValues(alpha: 0.3),
+      clipBehavior: Clip.antiAlias,
+      child: Tooltip(
+        message: tooltip,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onTap();
+          },
+          splashColor: BelieveColors.primarySoft,
+          highlightColor: BelieveColors.primarySoft.withValues(alpha: 0.5),
+          child: Container(
+            width: 44.w,
+            height: 44.w,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: BelieveColors.glassBorder),
             ),
-          ],
+            child: Icon(icon, color: color, size: 20),
+          ),
         ),
-        child: Icon(icon, color: color, size: 20),
       ),
     );
   }
@@ -672,20 +815,22 @@ class _PartnerLocationDetailScreenState
                   Stack(
                     alignment: Alignment.center,
                     children: [
-                      Container(
-                        width: 58.r,
-                        height: 58.r,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: BelieveColors.primary.withValues(alpha: 0.2),
-                        ),
-                      )
-                          .animate(onPlay: (c) => c.repeat(reverse: true))
-                          .scale(
-                            begin: const Offset(1, 1),
-                            end: const Offset(1.35, 1.35),
-                            duration: 1000.ms,
+                      ScaleTransition(
+                        scale: Tween<double>(begin: 1.0, end: 1.35).animate(
+                          CurvedAnimation(
+                            parent: _pulseController,
+                            curve: Curves.easeInOut,
                           ),
+                        ),
+                        child: Container(
+                          width: 58.r,
+                          height: 58.r,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: BelieveColors.primary.withValues(alpha: 0.2),
+                          ),
+                        ),
+                      ),
                       // Heart Pin Frame
                       Container(
                         width: 46.r,
@@ -896,12 +1041,16 @@ class _PartnerLocationDetailScreenState
                 color: BelieveColors.primary,
               ),
               SizedBox(width: 6.w),
-              Text(
-                'Arrived at ${DateFormat('h:mm a').format(state.arrivedAt)} • Stayed for ${state.stayDurationFormatted}',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w600,
-                  color: BelieveColors.textPrimary,
+              Expanded(
+                child: Text(
+                  'Arrived at ${DateFormat('h:mm a').format(state.arrivedAt)} • Stayed for ${state.stayDurationFormatted}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                    color: BelieveColors.textPrimary,
+                  ),
                 ),
               ),
             ],
@@ -912,79 +1061,89 @@ class _PartnerLocationDetailScreenState
           // Telemetry Pills & Nudge Action
           Row(
             children: [
-              // Battery Level Pill
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
-                decoration: BoxDecoration(
-                  color: isBatteryLow
-                      ? BelieveColors.error.withValues(alpha: 0.12)
-                      : BelieveColors.surfaceSubtle,
-                  borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(
-                    color: isBatteryLow
-                        ? BelieveColors.error
-                        : BelieveColors.border,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      state.isCharging
-                          ? LucideIcons.batteryCharging
-                          : LucideIcons.battery,
-                      size: 13,
-                      color: isBatteryLow
-                          ? BelieveColors.error
-                          : BelieveColors.primary,
-                    ),
-                    SizedBox(width: 4.w),
-                    Text(
-                      '${state.batteryLevel}%${state.isCharging ? ' (Charging)' : ''}',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w700,
-                        color: isBatteryLow
-                            ? BelieveColors.error
-                            : BelieveColors.textPrimary,
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Battery Level Pill
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                        decoration: BoxDecoration(
+                          color: isBatteryLow
+                              ? BelieveColors.error.withValues(alpha: 0.12)
+                              : BelieveColors.surfaceSubtle,
+                          borderRadius: BorderRadius.circular(12.r),
+                          border: Border.all(
+                            color: isBatteryLow
+                                ? BelieveColors.error
+                                : BelieveColors.border,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              state.isCharging
+                                  ? LucideIcons.batteryCharging
+                                  : LucideIcons.battery,
+                              size: 13,
+                              color: isBatteryLow
+                                  ? BelieveColors.error
+                                  : BelieveColors.primary,
+                            ),
+                            SizedBox(width: 4.w),
+                            Text(
+                              '${state.batteryLevel}%${state.isCharging ? ' (Charging)' : ''}',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w700,
+                                color: isBatteryLow
+                                    ? BelieveColors.error
+                                    : BelieveColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+
+                      SizedBox(width: 8.w),
+
+                      // GPS Accuracy Pill
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                        decoration: BoxDecoration(
+                          color: BelieveColors.surfaceSubtle,
+                          borderRadius: BorderRadius.circular(12.r),
+                          border: Border.all(color: BelieveColors.border),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              LucideIcons.radio,
+                              size: 12,
+                              color: BelieveColors.success,
+                            ),
+                            SizedBox(width: 4.w),
+                            Text(
+                              state.gpsAccuracy,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w600,
+                                color: BelieveColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
               SizedBox(width: 8.w),
-
-              // GPS Accuracy Pill
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
-                decoration: BoxDecoration(
-                  color: BelieveColors.surfaceSubtle,
-                  borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: BelieveColors.border),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      LucideIcons.radio,
-                      size: 12,
-                      color: BelieveColors.success,
-                    ),
-                    SizedBox(width: 4.w),
-                    Text(
-                      state.gpsAccuracy,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w600,
-                        color: BelieveColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const Spacer(),
 
               // Quick Action Button: Send 'Reached Safely?' Heart
               GestureDetector(

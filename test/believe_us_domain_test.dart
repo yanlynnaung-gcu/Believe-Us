@@ -6,6 +6,7 @@ import 'package:thae_nge_lay/features/auth/domain/models/user_profile.dart';
 import 'package:thae_nge_lay/features/gifting/data/datasources/gifting_remote_data_source.dart';
 import 'package:thae_nge_lay/features/gifting/data/repositories/gifting_repository_impl.dart';
 import 'package:thae_nge_lay/features/gifting/domain/models/gift_package.dart';
+import 'package:thae_nge_lay/features/gifting/domain/models/gift_transaction.dart';
 import 'package:thae_nge_lay/features/location_trust/data/repositories/location_arrival_repository.dart';
 import 'package:thae_nge_lay/features/location_trust/data/services/geocoding_service.dart';
 import 'package:thae_nge_lay/features/location_trust/domain/models/partner_location_arrival_model.dart';
@@ -120,6 +121,68 @@ class FakePairingRemoteDataSource implements PairingRemoteDataSource {
   }
 }
 
+class FakeGiftingRemoteDataSource implements GiftingRemoteDataSource {
+  @override
+  Future<List<GiftPackage>> getAvailableGiftPackages() async {
+    return const [
+      GiftPackage(
+        id: 'pkg_monetary_10k',
+        title: 'Pocket Love Blessing',
+        description: 'Sweet pocket money for snacks & coffee',
+        amountMmK: 10000,
+        iconEmoji: '☕',
+        categoryTag: 'Monetary',
+      ),
+      GiftPackage(
+        id: 'pkg_roses',
+        title: '99 Red Roses Bouquet',
+        description: 'Symbol of eternal devotion across the distance',
+        amountMmK: 35000,
+        iconEmoji: '🌹',
+        categoryTag: 'Romantic Package',
+      ),
+    ];
+  }
+
+  @override
+  Future<GiftTransaction> initiateAndVerifyPayment({
+    required String senderId,
+    required String receiverId,
+    required String coupleSpaceId,
+    required String packageTitle,
+    required int amountMmK,
+    required PaymentProvider provider,
+    required String note,
+  }) async {
+    final prefix = provider == PaymentProvider.kbzPay ? 'KBZ' : 'WAVE';
+    return GiftTransaction(
+      id: 'tx_fake_001',
+      senderId: senderId,
+      receiverId: receiverId,
+      coupleSpaceId: coupleSpaceId,
+      packageTitle: packageTitle,
+      amountMmK: amountMmK,
+      provider: provider,
+      note: note,
+      status: TransactionStatus.completed,
+      transactionRef: '$prefix-999999',
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<int> getUnseenGiftsCount({
+    required String coupleSpaceId,
+    required String receiverId,
+  }) async => 0;
+
+  @override
+  Future<void> markGiftsAsSeen({
+    required String coupleSpaceId,
+    required String receiverId,
+  }) async {}
+}
+
 void main() {
   group('Core Domain Rule #2: Strict 1-to-1 Partner Lock', () {
     late PairingRepositoryImpl pairingRepo;
@@ -180,7 +243,7 @@ void main() {
 
     setUp(() {
       giftingRepo = GiftingRepositoryImpl(
-        remoteDataSource: GiftingRemoteDataSourceImpl(),
+        remoteDataSource: FakeGiftingRemoteDataSource(),
       );
     });
 
@@ -233,11 +296,11 @@ void main() {
       );
     });
 
-    test('Loads shared couple timeline and seeds default memories', () async {
-      final result = await anniversaryRepo.getMilestones('space_demo');
+    test('Loads clean couple timeline without dummy seed memories', () async {
+      final result = await anniversaryRepo.getMilestones('space_clean');
       expect(result.isRight(), isTrue);
       final list = result.getOrElse((_) => []);
-      expect(list.isNotEmpty, isTrue);
+      expect(list.isEmpty, isTrue);
     });
 
     test('Adding a new milestone succeeds with Either Right', () async {

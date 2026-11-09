@@ -57,9 +57,4 @@ class LocationPermissionController extends _$LocationPermissionController {
     await setGranted(isGranted);
     return isGranted;
   }
-
-  /// Emergency/Demo bypass for testing environments or simulators where GPS hardware is mocked
-  Future<void> grantSimulatedPermission() async {
-    await setGranted(true);
-  }
 }

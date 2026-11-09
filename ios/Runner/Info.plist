@@ -55,5 +55,18 @@
 	<string>Thae Thae requires continuous location sharing to display distance between your hearts and arrival alerts.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Thae Thae requires continuous location sharing to display distance between your hearts and arrival alerts.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Thae Thae requires continuous location sharing to display distance between your hearts and arrival alerts.</string>
+	<key>io.flutter.embedded_views_preview</key>
+	<true/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>mailto</string>
+		<string>https</string>
+		<string>http</string>
+		<string>viber</string>
+		<string>fb</string>
+	</array>
 </dict>
 </plist>

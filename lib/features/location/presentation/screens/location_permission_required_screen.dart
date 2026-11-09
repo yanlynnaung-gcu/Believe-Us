@@ -56,12 +56,6 @@ class _LocationPermissionRequiredScreenState
     }
   }
 
-  void _onSimulatorBypass() async {
-    await ref
-        .read(locationPermissionControllerProvider.notifier)
-        .grantSimulatedPermission();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -208,21 +202,6 @@ class _LocationPermissionRequiredScreenState
                               color: Colors.white,
                             ),
                           ),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 16.h),
-
-              // Simulator / Test Bypass Option
-              TextButton(
-                onPressed: _onSimulatorBypass,
-                child: Text(
-                  'Continue with Simulated GPS (Dev/Test)',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13.sp,
-                    color: BelieveColors.textMuted,
-                    decoration: TextDecoration.underline,
                   ),
                 ),
               ),

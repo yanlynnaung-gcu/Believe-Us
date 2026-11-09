@@ -207,24 +207,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       data: (messages) {
                         if (messages.isEmpty) {
                           return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  LucideIcons.heart,
-                                  size: 48,
-                                  color: BelieveColors.primarySoft,
-                                ),
-                                SizedBox(height: 12.h),
-                                Text(
-                                  'Your private love stream starts here.\nSend a love note, voice memo or gift surprise!',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 13.sp,
-                                    color: BelieveColors.textMuted,
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    LucideIcons.heart,
+                                    size: 48,
+                                    color: BelieveColors.primarySoft,
                                   ),
-                                ),
-                              ],
+                                  SizedBox(height: 12.h),
+                                  Text(
+                                    'Your private love stream starts here.\nSend a love note, voice memo or gift surprise!',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 13.sp,
+                                      color: BelieveColors.textMuted,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         }
@@ -242,7 +244,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           itemBuilder: (context, index) {
                             final message = messages[index];
                             final isMe =
-                                message.senderId == (user?.id ?? 'usr_me');
+                                message.senderId == user?.id;
 
                             return Align(
                               alignment: isMe

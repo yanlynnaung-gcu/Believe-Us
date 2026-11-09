@@ -225,28 +225,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final userJson = Map<String, dynamic>.from(data['user'] as Map);
       return UserProfile.fromJson(userJson);
     } catch (e) {
-      if (e.toString().contains('cancelled') || e.toString().contains('aborted')) {
-        rethrow;
-      }
-      // If native Google Play Services is absent on test emulator, register direct fallback
-      final fallbackPayload = {
-        'email': 'google_partner@believeus.app',
-        'displayName': 'Google Partner',
-        'photoUrl': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
-        'googleId': 'gid_mock_emulator',
-        'role': role ?? 'BOYFRIEND',
-      };
-      final response = await _dio.post(
-        ApiEndpoints.authGooglePath,
-        data: fallbackPayload,
-      );
-      final data = response.data as Map<String, dynamic>;
-      final token = data['token'] as String?;
-      if (token != null) {
-        await _storage.setAuthToken(token);
-      }
-      final userJson = Map<String, dynamic>.from(data['user'] as Map);
-      return UserProfile.fromJson(userJson);
+      rethrow;
     }
   }
 

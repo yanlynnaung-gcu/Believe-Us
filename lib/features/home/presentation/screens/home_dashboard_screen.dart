@@ -10,6 +10,7 @@ import 'package:thae_nge_lay/core/theme/glassmorphic_card.dart';
 import 'package:thae_nge_lay/features/auth/presentation/controllers/auth_state_notifier.dart';
 import 'package:thae_nge_lay/features/chat/presentation/controllers/unread_messages_controller.dart';
 import 'package:thae_nge_lay/features/chat/presentation/screens/chat_screen.dart';
+import 'package:thae_nge_lay/features/emergency/presentation/controllers/emergency_controller.dart';
 import 'package:thae_nge_lay/features/gifting/presentation/controllers/unseen_gifts_controller.dart';
 import 'package:thae_nge_lay/features/gifting/presentation/widgets/gift_selection_sheet.dart';
 import 'package:thae_nge_lay/features/home/presentation/widgets/home_redesign_widgets.dart';
@@ -245,6 +246,12 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
       },
     );
 
+    ref.listen<EmergencyState>(emergencyControllerProvider, (prev, next) {
+      if (next.isAlarmActive && (prev == null || !prev.isAlarmActive)) {
+        context.push(AppRoutes.emergencyAlarm, extra: next.activeAlert);
+      }
+    });
+
     final safeAreaBottom = MediaQuery.paddingOf(context).bottom;
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
     final isKeyboardOpen = keyboardHeight > 0;
@@ -277,7 +284,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
               // TAB 2: "Where You Are" -> Partner Location Detail Screen
               const PartnerLocationDetailScreen(),
 
-              // TAB 3: Placeholder (Triggers Gift Selection)
+              // TAB 3: Gift & Surprise Shop
               _buildGiftShopPreviewView(context),
             ],
           ),
@@ -553,7 +560,9 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                   SizedBox(width: 10.w),
                   Expanded(
                     child: Text(
-                      '1-to-1 Sacred Connection • Space #${coupleSpaceId ?? "space_demo"}',
+                      coupleSpaceId != null
+                          ? '1-to-1 Sacred Connection • Space #$coupleSpaceId'
+                          : '1-to-1 Sacred Connection • Pending Pairing',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11.sp,
                         color: BelieveColors.burgundy,
@@ -562,7 +571,13 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                     ),
                   ),
                   IconButton(
+                    icon: const Icon(LucideIcons.settings, size: 16),
+                    tooltip: 'Sanctuary Settings & Support',
+                    onPressed: () => context.push(AppRoutes.settings),
+                  ),
+                  IconButton(
                     icon: const Icon(LucideIcons.logOut, size: 16),
+                    tooltip: 'Sign Out',
                     onPressed: () =>
                         ref.read(authStateProvider.notifier).signOut(),
                   ),

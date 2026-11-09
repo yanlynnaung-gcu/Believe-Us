@@ -53,7 +53,7 @@ class PairingController extends _$PairingController {
     });
 
     _initRealtimeListener();
-    _loadInviteCode();
+    Future.microtask(() => _loadInviteCode());
     return const PairingUIState();
   }
 
@@ -170,13 +170,17 @@ class PairingController extends _$PairingController {
     final user = ref.read(authStateProvider);
     if (user == null) return false;
 
-    String sanitizedCode = code.trim().toUpperCase();
-    if (sanitizedCode.contains('code=')) {
-      final uri = Uri.tryParse(sanitizedCode);
-      if (uri != null && uri.queryParameters.containsKey('code')) {
-        sanitizedCode = uri.queryParameters['code']!.toUpperCase();
-      }
+    // Strict regex extraction for pure 6-digit code
+    final match = RegExp(r'\d{6}').firstMatch(code);
+    if (match == null) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Invalid couple code. Please enter a valid 6-digit numeric code.',
+      );
+      return false;
     }
+
+    final sanitizedCode = match.group(0)!;
 
     state = state.copyWith(isLoading: true, clearError: true);
     final repo = ref.read(pairingRepositoryProvider);

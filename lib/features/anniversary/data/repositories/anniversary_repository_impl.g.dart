@@ -55,4 +55,4 @@ final class AnniversaryRepositoryProvider
 }
 
 String _$anniversaryRepositoryHash() =>
-    r'74611305140163945da55bdbed71323d6ff1d555';
+    r'e77e9c01cbd5aae16feca19807a9134033fe83a4';

@@ -22,46 +22,7 @@ class AnniversaryRemoteDataSourceImpl implements AnniversaryRemoteDataSource {
 
   static final Map<String, List<AnniversaryMilestone>> _milestonesStore = {};
 
-  AnniversaryRemoteDataSourceImpl({Dio? dio}) : _dio = dio {
-    _seedDefaultMilestones();
-  }
-
-  void _seedDefaultMilestones() {
-    if (_milestonesStore.isEmpty) {
-      const defaultSpaceId = 'space_demo';
-      final now = DateTime.now();
-
-      _milestonesStore[defaultSpaceId] = [
-        AnniversaryMilestone(
-          id: 'ms_seed_1',
-          title: 'The Day We Said Yes ❤️',
-          targetDate: DateTime(now.year - 1, 10, 24),
-          isRecurringAnnual: true,
-          iconEmoji: '💍',
-          note: 'The most sacred day when our journey began',
-          category: 'Annual Anniversary',
-        ),
-        AnniversaryMilestone(
-          id: 'ms_seed_2',
-          title: 'First Flight Visit & Warmest Hug',
-          targetDate: DateTime(now.year, 12, 15),
-          isRecurringAnnual: false,
-          iconEmoji: '✈️',
-          note: 'Yangon to Mandalay flight reunion',
-          category: 'Trip Countdown',
-        ),
-        AnniversaryMilestone(
-          id: 'ms_seed_3',
-          title: 'Valentine\'s Day Celebration',
-          targetDate: DateTime(now.year + 1, 2, 14),
-          isRecurringAnnual: true,
-          iconEmoji: '💌',
-          note: 'Romantic virtual candle date & special gifts',
-          category: 'Holiday',
-        ),
-      ];
-    }
-  }
+  AnniversaryRemoteDataSourceImpl({Dio? dio}) : _dio = dio;
 
   List<AnniversaryMilestone> _getList(String coupleSpaceId) {
     return _milestonesStore.putIfAbsent(coupleSpaceId, () => []);

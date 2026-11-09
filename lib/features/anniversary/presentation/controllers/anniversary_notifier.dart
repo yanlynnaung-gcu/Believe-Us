@@ -49,7 +49,7 @@ class AnniversaryNotifier extends _$AnniversaryNotifier {
     final now = DateTime.now();
     final daysTogether = now.difference(anniversaryDate).inDays.abs();
 
-    _loadMilestones();
+    Future.microtask(() => _loadMilestones());
 
     return AnniversaryEngineState(
       daysTogether: daysTogether < 1 ? 1 : daysTogether,
@@ -60,7 +60,11 @@ class AnniversaryNotifier extends _$AnniversaryNotifier {
 
   Future<void> _loadMilestones() async {
     final user = ref.read(authStateProvider);
-    final spaceId = user?.coupleSpaceId ?? 'space_demo';
+    final spaceId = user?.coupleSpaceId;
+    if (spaceId == null || spaceId.isEmpty) {
+      state = state.copyWith(isLoading: false, milestones: const []);
+      return;
+    }
     final repo = ref.read(anniversaryRepositoryProvider);
 
     final result = await repo.getMilestones(spaceId);
@@ -117,7 +121,8 @@ class AnniversaryNotifier extends _$AnniversaryNotifier {
     String? note,
   }) async {
     final user = ref.read(authStateProvider);
-    final spaceId = user?.coupleSpaceId ?? 'space_demo';
+    final spaceId = user?.coupleSpaceId;
+    if (spaceId == null || spaceId.isEmpty) return false;
     final repo = ref.read(anniversaryRepositoryProvider);
 
     final result = await repo.addMilestone(

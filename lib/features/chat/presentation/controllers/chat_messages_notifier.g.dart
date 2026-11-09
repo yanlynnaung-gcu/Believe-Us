@@ -34,7 +34,7 @@ final class ChatMessagesNotifierProvider
 }
 
 String _$chatMessagesNotifierHash() =>
-    r'f4ab01074abcb2b4cb941ebe82c34822a85a0029';
+    r'ab10d726b694f07d6199816466946dc467d5cfc7';
 
 abstract class _$ChatMessagesNotifier
     extends $StreamNotifier<List<ChatMessage>> {

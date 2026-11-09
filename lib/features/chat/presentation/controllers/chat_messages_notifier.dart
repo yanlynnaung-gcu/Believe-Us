@@ -10,7 +10,10 @@ class ChatMessagesNotifier extends _$ChatMessagesNotifier {
   @override
   Stream<List<ChatMessage>> build() {
     final user = ref.watch(authStateProvider);
-    final spaceId = user?.coupleSpaceId ?? 'space_demo';
+    final spaceId = user?.coupleSpaceId;
+    if (spaceId == null || spaceId.isEmpty) {
+      return Stream.value(const <ChatMessage>[]);
+    }
     final repo = ref.watch(chatRepositoryProvider);
     return repo.streamMessages(spaceId);
   }
@@ -18,12 +21,15 @@ class ChatMessagesNotifier extends _$ChatMessagesNotifier {
   Future<bool> sendTextMessage(String text) async {
     final user = ref.read(authStateProvider);
     if (user == null || text.trim().isEmpty) return false;
+    final partnerId = user.partnerId;
+    final coupleSpaceId = user.coupleSpaceId;
+    if (partnerId == null || coupleSpaceId == null) return false;
 
     final repo = ref.read(chatRepositoryProvider);
     final result = await repo.sendTextMessage(
       senderId: user.id,
-      receiverId: user.partnerId ?? 'usr_partner_demo',
-      coupleSpaceId: user.coupleSpaceId ?? 'space_demo',
+      receiverId: partnerId,
+      coupleSpaceId: coupleSpaceId,
       text: text,
     );
     return result.isRight();
@@ -36,12 +42,15 @@ class ChatMessagesNotifier extends _$ChatMessagesNotifier {
   }) async {
     final user = ref.read(authStateProvider);
     if (user == null) return false;
+    final partnerId = user.partnerId;
+    final coupleSpaceId = user.coupleSpaceId;
+    if (partnerId == null || coupleSpaceId == null) return false;
 
     final repo = ref.read(chatRepositoryProvider);
     final result = await repo.sendVoiceMessage(
       senderId: user.id,
-      receiverId: user.partnerId ?? 'usr_partner_demo',
-      coupleSpaceId: user.coupleSpaceId ?? 'space_demo',
+      receiverId: partnerId,
+      coupleSpaceId: coupleSpaceId,
       audioPath: audioPath,
       durationSeconds: durationSeconds,
       waveforms: waveforms,
