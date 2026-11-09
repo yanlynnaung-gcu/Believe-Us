@@ -78,6 +78,7 @@ public class SyncWebSocketHandler extends TextWebSocketHandler {
                     topics.add("/topic/couple." + spaceId + ".gifts");
                     topics.add("/topic/couple." + spaceId + ".status");
                     topics.add("/topic/couple." + spaceId + ".milestones");
+                    topics.add("/topic/couple." + spaceId + ".emergency");
                     log.info("[WS Subscribed Dynamic Space Room] Session '{}' subscribed to: {}", session.getId(), basePattern);
                 }
 

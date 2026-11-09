@@ -68,18 +68,16 @@ public class PairingService {
             }
         }
 
-        // 3. Generate unique 6-character uppercase code
+        // 3. Generate unique pure 6-digit numeric code
         String code;
         int attempts = 0;
         do {
-            StringBuilder sb = new StringBuilder(6);
-            for (int i = 0; i < 6; i++) {
-                sb.append(CODE_CHARS.charAt(RANDOM.nextInt(CODE_CHARS.length())));
-            }
-            code = sb.toString();
+            int num = RANDOM.nextInt(1000000);
+            code = String.format("%06d", num);
             attempts++;
             if (attempts > 50) {
-                code = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+                long fallback = Math.abs(System.currentTimeMillis() % 1000000L);
+                code = String.format("%06d", fallback);
             }
         } while (userInviteCodeRepository.existsById(code));
 
@@ -106,8 +104,11 @@ public class PairingService {
             throw new IllegalArgumentException("Invite code cannot be empty. Please enter your partner's 6-digit code.");
         }
 
-        // Trim and uppercase normalize
-        String normalizedCode = inviteCode.trim().toUpperCase();
+        // Trim and validate strictly 6-digit numeric code
+        String normalizedCode = inviteCode.trim();
+        if (!normalizedCode.matches("^\\d{6}$")) {
+            throw new IllegalArgumentException("Pairing code must be exactly 6 digits.");
+        }
 
         // 1. Check current user 1-to-1 lock
         if (coupleSpaceRepository.findActiveSpaceByUserId(currentUserId).isPresent()) {

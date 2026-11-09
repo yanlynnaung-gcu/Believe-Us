@@ -12,10 +12,11 @@ spring:
       max-file-size: 25MB
       max-request-size: 25MB
   mail:
+  
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
     port: ${SPRING_MAIL_PORT:587}
-    username: yanlynnaung.pro@gmail.com
-    password: dcxhohqudqfwqpeq
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -49,6 +50,17 @@ believeus:
     stationary-radius-meters: 75.0
     stationary-duration-minutes: 5
     departure-radius-meters: 200.0
+  mqtt:
+    enabled: ${MQTT_ENABLED:true}
+    broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}
+    client-id: believeus-backend-sos
+    clean-session: false
+    keep-alive-seconds: 30
+    qos: 1
+    embedded:
+      enabled: ${MQTT_EMBEDDED_ENABLED:true}
+      port: ${MQTT_PORT:1883}
+      host: ${MQTT_HOST:0.0.0.0}
 
 # ==============================================================================
 # Development Profile (Persistent H2 File-Based Database for Local Testing)

@@ -89,10 +89,22 @@ class AuthAndPairingIntegrationTest {
         assertEquals("GIRLFRIEND", gfAuth.getUser().getRole());
         String gfUserId = gfAuth.getUser().getId();
 
-        // 3. Boyfriend generates invite code
+        // 3. Boyfriend generates invite code (strict 6-digit numeric)
         String inviteCode = pairingService.getOrCreateInviteCode(bfUserId);
         assertNotNull(inviteCode);
         assertEquals(6, inviteCode.length());
+        assertTrue(inviteCode.matches("^\\d{6}$"), "Invite code must be pure 6-digit numeric string");
+
+        // Non-6-digit codes are rejected
+        assertThrows(IllegalArgumentException.class, () -> {
+            pairingService.pairWithCode(gfUserId, "12345");
+        });
+        assertThrows(IllegalArgumentException.class, () -> {
+            pairingService.pairWithCode(gfUserId, "ABCDEF");
+        });
+        assertThrows(IllegalArgumentException.class, () -> {
+            pairingService.pairWithCode(gfUserId, "1234567");
+        });
 
         // 4. Girlfriend pairs using Boyfriend's invite code
         CoupleSpaceResponse pairedSpace = pairingService.pairWithCode(gfUserId, inviteCode);

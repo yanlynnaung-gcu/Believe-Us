@@ -75,4 +75,45 @@ public class FirebaseMessagingService {
 
         return true;
     }
+
+    /**
+     * Sends high-priority Emergency SOS push notification to partner device
+     */
+    public boolean sendEmergencySOSNotification(
+            String senderName,
+            double latitude,
+            double longitude,
+            String messageText,
+            String partnerName
+    ) {
+        String title = String.format("🚨 EMERGENCY SOS from %s!", senderName);
+        String body = String.format("%s needs your immediate help! %s (Location: %.5f, %.5f)",
+                senderName,
+                (messageText != null && !messageText.isBlank()) ? messageText : "Immediate assistance required!",
+                latitude,
+                longitude);
+
+        Map<String, String> dataPayload = new HashMap<>();
+        dataPayload.put("type", "EMERGENCY_SOS");
+        dataPayload.put("route", "/emergency-alarm");
+        dataPayload.put("senderName", senderName);
+        dataPayload.put("latitude", String.valueOf(latitude));
+        dataPayload.put("longitude", String.valueOf(longitude));
+        dataPayload.put("message", messageText != null ? messageText : "");
+        dataPayload.put("priority", "MAX_EMERGENCY");
+        dataPayload.put("alarm", "true");
+
+        Map<String, Object> record = new HashMap<>();
+        record.put("title", title);
+        record.put("body", body);
+        record.put("data", dataPayload);
+        record.put("priority", "HIGH");
+        record.put("timestamp", LocalDateTime.now());
+
+        sentNotificationsHistory.add(record);
+        log.warn("[FCM EMERGENCY SOS PUSH SENT] Title: '{}', Body: '{}', Location: {},{}",
+                title, body, latitude, longitude);
+
+        return true;
+    }
 }
