@@ -11,6 +11,7 @@ import 'package:thae_nge_lay/core/router/route_names.dart';
 import 'package:thae_nge_lay/core/services/media_picker_service.dart';
 import 'package:thae_nge_lay/core/theme/app_colors.dart';
 import 'package:thae_nge_lay/core/theme/glassmorphic_card.dart';
+import 'package:thae_nge_lay/core/utils/image_provider_helper.dart';
 import 'package:thae_nge_lay/core/utils/zodiac_helper.dart';
 import 'package:thae_nge_lay/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:thae_nge_lay/features/auth/presentation/controllers/auth_state_notifier.dart';
@@ -268,9 +269,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                                 backgroundColor: Colors.white,
                                 backgroundImage: _customAvatarFile != null
                                     ? FileImage(_customAvatarFile!)
-                                    : NetworkImage(
-                                            _avatarUrls[_selectedAvatarIndex])
-                                        as ImageProvider,
+                                    : getCustomImageProvider(
+                                        _avatarUrls[_selectedAvatarIndex]),
                               ),
                             ),
                             Positioned(
@@ -340,7 +340,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                               child: CircleAvatar(
                                 radius: 18.r,
                                 backgroundImage:
-                                    NetworkImage(_avatarUrls[index]),
+                                    getCustomImageProvider(_avatarUrls[index]),
                               ),
                             ),
                           );

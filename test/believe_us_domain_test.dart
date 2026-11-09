@@ -153,6 +153,7 @@ class FakeGiftingRemoteDataSource implements GiftingRemoteDataSource {
     required int amountMmK,
     required PaymentProvider provider,
     required String note,
+    String? transactionRef,
   }) async {
     final prefix = provider == PaymentProvider.kbzPay ? 'KBZ' : 'WAVE';
     return GiftTransaction(
@@ -165,7 +166,7 @@ class FakeGiftingRemoteDataSource implements GiftingRemoteDataSource {
       provider: provider,
       note: note,
       status: TransactionStatus.completed,
-      transactionRef: '$prefix-999999',
+      transactionRef: transactionRef ?? '$prefix-999999',
       createdAt: DateTime.now(),
     );
   }

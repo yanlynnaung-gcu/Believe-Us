@@ -13,6 +13,7 @@ abstract interface class GiftingRepository {
     required int amountMmK,
     required PaymentProvider provider,
     required String note,
+    String? transactionRef,
   });
   Future<Either<Failure, int>> getUnseenGiftsCount({
     required String coupleSpaceId,

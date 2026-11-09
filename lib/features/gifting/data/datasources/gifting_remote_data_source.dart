@@ -14,6 +14,7 @@ abstract interface class GiftingRemoteDataSource {
     required int amountMmK,
     required PaymentProvider provider,
     required String note,
+    String? transactionRef,
   });
   Future<int> getUnseenGiftsCount({
     required String coupleSpaceId,
@@ -105,7 +106,10 @@ class GiftingRemoteDataSourceImpl implements GiftingRemoteDataSource {
     required int amountMmK,
     required PaymentProvider provider,
     required String note,
+    String? transactionRef,
   }) async {
+    final prefix = provider == PaymentProvider.kbzPay ? 'KBZ' : 'WAVE';
+    final fallbackRef = transactionRef ?? '$prefix-${DateTime.now().millisecondsSinceEpoch % 1000000}';
     final response = await _dio.post(
       ApiEndpoints.giftingPayPath,
       data: {
@@ -116,12 +120,11 @@ class GiftingRemoteDataSourceImpl implements GiftingRemoteDataSource {
         'amountMmK': amountMmK,
         'provider': provider == PaymentProvider.kbzPay ? 'KBZPAY' : 'WAVEPAY',
         'note': note,
+        'transactionRef': fallbackRef,
       },
     );
     if (response.statusCode == 200 && response.data != null) {
       final data = response.data;
-      final prefix = provider == PaymentProvider.kbzPay ? 'KBZ' : 'WAVE';
-      final fallbackRef = '$prefix-${DateTime.now().millisecondsSinceEpoch % 1000000}';
       return GiftTransaction(
         id: data['id']?.toString() ?? 'tx_${_uuid.v4().substring(0, 8)}',
         senderId: senderId,

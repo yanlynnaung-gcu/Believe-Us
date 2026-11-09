@@ -8,18 +8,16 @@ part 'api_client.g.dart';
 
 /// Configuration & Base URL resolution for Thae Thae Real-Time Multi-Device Sync
 class ApiEndpoints {
-  /// Railway Production Base URL
+  /// Railway Production Base URL (Default အဖြစ် အမြဲသုံးရန်)
   static const String defaultProductionUrl =
       'https://believe-us-production.up.railway.app';
 
-  /// Local Testing IP (Fallback when local)
+  /// Local Testing IP (Fallback when explicitly targeted)
   static const String defaultLanIp = '192.168.1.6';
   static const int defaultPort = 8080;
   static const int defaultMqttPort = 1883;
 
   /// Resolves the host for API & WebSocket:
-  /// 1. `--dart-define=API_HOST=<LAN_IP>` (Explicit override)
-  /// 2. Defaults to MacBook LAN IP (192.168.1.6)
   static String get host {
     const customHost = String.fromEnvironment('API_HOST');
     if (customHost.isNotEmpty) {
@@ -57,7 +55,8 @@ class ApiEndpoints {
     if (customBaseUrl.isNotEmpty) {
       return customBaseUrl;
     }
-    return 'http://$host:$port';
+    // Default အနေဖြင့် Railway Production URL ကို အမြဲသုံးမည်
+    return defaultProductionUrl;
   }
 
   static String get wsUrl {
@@ -134,7 +133,6 @@ class JwtAuthInterceptor extends Interceptor {
 }
 
 /// Robust Exponential Backoff Retry Interceptor for Dio
-/// Gracefully retries transient network disconnects and server restart 5xx errors
 class DioExponentialBackoffRetryInterceptor extends Interceptor {
   final Dio dio;
   final int maxRetries;
@@ -150,7 +148,6 @@ class DioExponentialBackoffRetryInterceptor extends Interceptor {
   });
 
   bool _isRetryable(DioException err) {
-    // Network drops, timeout or connection resets
     if (err.type == DioExceptionType.connectionTimeout ||
         err.type == DioExceptionType.sendTimeout ||
         err.type == DioExceptionType.receiveTimeout ||
@@ -158,7 +155,6 @@ class DioExponentialBackoffRetryInterceptor extends Interceptor {
       return true;
     }
 
-    // Server restart or temporary gateway failure (500, 502, 503, 504)
     if (err.response != null) {
       final code = err.response!.statusCode;
       if (code != null &&
@@ -230,20 +226,18 @@ Dio dioClient(Ref ref) {
 
   final dio = Dio(options);
 
-  // 1. JWT Bearer Token Injection
   try {
     final storage = ref.watch(localStorageServiceProvider);
     dio.interceptors.add(JwtAuthInterceptor(storage));
-  } catch (_) {
-    // Fallback when storage provider is not initialized
-  }
+  } catch (_) {}
 
-  // 2. Exponential Backoff Auto-Retry on network failures/server restarts
   dio.interceptors.add(DioExponentialBackoffRetryInterceptor(dio: dio));
 
-  // 3. Debug logging in dev mode (error-only by default to prevent console spam & CPU heat)
   if (kDebugMode) {
-    const bool verboseDioLogs = bool.fromEnvironment('VERBOSE_DIO_LOGS', defaultValue: false);
+    const bool verboseDioLogs = bool.fromEnvironment(
+      'VERBOSE_DIO_LOGS',
+      defaultValue: false,
+    );
     dio.interceptors.add(
       LogInterceptor(
         request: verboseDioLogs,

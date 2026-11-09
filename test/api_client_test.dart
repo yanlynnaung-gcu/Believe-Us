@@ -13,15 +13,15 @@ import 'package:thae_nge_lay/features/pairing/data/datasources/pairing_remote_da
 
 void main() {
   group('ApiClient and Multi-Device LAN URL Resolution', () {
-    test('ApiEndpoints resolves MacBook LAN IP for both Emulator & Physical Phone', () {
+    test('ApiEndpoints resolves Railway Production URL by default', () {
       final host = ApiEndpoints.host;
       expect(host, equals('192.168.1.6'));
 
       final baseUrl = ApiEndpoints.baseUrl;
-      expect(baseUrl, equals('http://192.168.1.6:8080'));
+      expect(baseUrl, equals(ApiEndpoints.defaultProductionUrl));
 
       final wsUrl = ApiEndpoints.wsUrl;
-      expect(wsUrl, equals('ws://192.168.1.6:8080/ws'));
+      expect(wsUrl, equals('wss://believe-us-production.up.railway.app/ws'));
     });
 
     test('LocationArrivalRepository parses Spring Boot JSON with numeric IDs correctly', () async {

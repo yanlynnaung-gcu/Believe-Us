@@ -33,6 +33,14 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Deep Link Intent Filter for Payment Callback & Couple Links -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="believeus" android:host="payment"/>
+                <data android:scheme="thaethae" android:host="payment"/>
+            </intent-filter>
         </activity>
 
         <!-- Google Maps API Key -->
@@ -78,5 +86,20 @@
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="viber"/>
         </intent>
+        <!-- Payment App Intents for KBZPay and WavePay -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="kbzpay"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="wavepay"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="wavemoney"/>
+        </intent>
+        <package android:name="com.kbzbank.kpay"/>
+        <package android:name="mm.com.wavemoney.wavepay"/>
     </queries>
 </manifest>

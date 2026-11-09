@@ -16,11 +16,12 @@ class ContactUsScreen extends StatefulWidget {
 
 class _ContactUsScreenState extends State<ContactUsScreen> {
   // Contact details
-  static const String _phoneNumber = '+959777123456';
-  static const String _displayPhone = '+95 9 777 123 456';
-  static const String _emailAddress = 'support@thaethae.love';
-  static const String _facebookPageUrl = 'https://www.facebook.com/thaethaeapp';
-  static const String _viberChatUrl = 'viber://chat?number=%2B959777123456';
+  static const String _phoneNumber = '+959778625843';
+  static const String _displayPhone = '+959778625843';
+  static const String _emailAddress = 'yanlynnaung.ucsmgy@gmail.com';
+  static const String _facebookPageUrl =
+      'https://www.facebook.com/share/1DR4umP335/';
+  static const String _viberChatUrl = 'viber://chat?number=%2B959404106269';
   static const String _viberWebFallback = 'https://viber.com';
 
   final TextEditingController _feedbackController = TextEditingController();
@@ -162,7 +163,11 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
         ),
         content: Row(
           children: [
-            const Icon(LucideIcons.checkCheck, color: BelieveColors.success, size: 16),
+            const Icon(
+              LucideIcons.checkCheck,
+              color: BelieveColors.success,
+              size: 16,
+            ),
             SizedBox(width: 8.w),
             Text(
               '$label copied to clipboard! ✨',
@@ -250,8 +255,10 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                   ),
                   SizedBox(height: 12.h),
                   Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 6.h,
+                    ),
                     decoration: BoxDecoration(
                       color: BelieveColors.primarySoft,
                       borderRadius: BorderRadius.circular(20.r),
@@ -396,18 +403,21 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14.r),
-                        borderSide:
-                            const BorderSide(color: BelieveColors.glassBorder),
+                        borderSide: const BorderSide(
+                          color: BelieveColors.glassBorder,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14.r),
-                        borderSide:
-                            const BorderSide(color: BelieveColors.glassBorder),
+                        borderSide: const BorderSide(
+                          color: BelieveColors.glassBorder,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14.r),
-                        borderSide:
-                            const BorderSide(color: BelieveColors.primary),
+                        borderSide: const BorderSide(
+                          color: BelieveColors.primary,
+                        ),
                       ),
                     ),
                   ),
@@ -433,8 +443,11 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(LucideIcons.send,
-                              size: 16, color: Colors.white),
+                          const Icon(
+                            LucideIcons.send,
+                            size: 16,
+                            color: Colors.white,
+                          ),
                           SizedBox(width: 8.w),
                           Text(
                             'Send via Email',
@@ -522,13 +535,14 @@ class _ContactActionCard extends StatelessWidget {
                     ),
                     SizedBox(width: 6.w),
                     Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 6.w,
+                        vertical: 2.h,
+                      ),
                       decoration: BoxDecoration(
                         color: BelieveColors.surfaceSubtle,
                         borderRadius: BorderRadius.circular(6.r),
-                        border:
-                            Border.all(color: BelieveColors.glassBorder),
+                        border: Border.all(color: BelieveColors.glassBorder),
                       ),
                       child: Text(
                         badgeText,

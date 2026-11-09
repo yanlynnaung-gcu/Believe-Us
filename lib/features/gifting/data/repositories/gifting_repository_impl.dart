@@ -34,6 +34,7 @@ class GiftingRepositoryImpl implements GiftingRepository {
     required int amountMmK,
     required PaymentProvider provider,
     required String note,
+    String? transactionRef,
   }) async {
     try {
       if (amountMmK <= 0) {
@@ -47,6 +48,7 @@ class GiftingRepositoryImpl implements GiftingRepository {
         amountMmK: amountMmK,
         provider: provider,
         note: note,
+        transactionRef: transactionRef,
       );
       return Right(transaction);
     } catch (e) {

@@ -10,6 +10,7 @@ abstract final class AppRoutes {
   static const map = '/map';
   static const locationDetails = '/location-details';
   static const gifting = '/gifting';
+  static const paymentCallback = '/payment/callback';
   static const anniversary = '/anniversary';
   static const settings = '/settings';
   static const contactUs = '/contact-us';

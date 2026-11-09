@@ -11,6 +11,7 @@ import 'package:thae_nge_lay/features/auth/presentation/screens/profile_setup_sc
 import 'package:thae_nge_lay/features/chat/presentation/screens/chat_screen.dart';
 import 'package:thae_nge_lay/features/emergency/domain/models/emergency_sos_model.dart';
 import 'package:thae_nge_lay/features/emergency/presentation/screens/emergency_alarm_screen.dart';
+import 'package:thae_nge_lay/features/gifting/presentation/screens/payment_callback_handler_screen.dart';
 import 'package:thae_nge_lay/features/home/presentation/screens/home_dashboard_screen.dart';
 import 'package:thae_nge_lay/features/location/presentation/controllers/location_permission_controller.dart';
 import 'package:thae_nge_lay/features/location/presentation/screens/location_permission_required_screen.dart';
@@ -162,6 +163,19 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) {
           final alert = state.extra as EmergencySOSModel?;
           return EmergencyAlarmScreen(alert: alert);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.paymentCallback,
+        builder: (context, state) {
+          final queryParams = state.uri.queryParameters;
+          return PaymentCallbackHandlerScreen(
+            status: queryParams['status'] ?? 'success',
+            orderId: queryParams['orderId'],
+            transactionRef:
+                queryParams['txnRef'] ?? queryParams['transactionRef'],
+            provider: queryParams['provider'],
+          );
         },
       ),
     ],

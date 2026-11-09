@@ -59,6 +59,20 @@
 	<string>Thae Thae requires continuous location sharing to display distance between your hearts and arrival alerts.</string>
 	<key>io.flutter.embedded_views_preview</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.believeus.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>believeus</string>
+				<string>thaethae</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>tel</string>
@@ -67,6 +81,9 @@
 		<string>http</string>
 		<string>viber</string>
 		<string>fb</string>
+		<string>kbzpay</string>
+		<string>wavepay</string>
+		<string>wavemoney</string>
 	</array>
 </dict>
 </plist>

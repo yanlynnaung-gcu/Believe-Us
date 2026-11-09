@@ -60,7 +60,6 @@ class WebSocketSyncService {
   static const Set<String> _highFrequencyEvents = {
     'PONG',
     'PING',
-    'HEART_PING',
     'HEARTBEAT',
     'LOCATION_UPDATE',
     'LOCATION_HEARTBEAT',

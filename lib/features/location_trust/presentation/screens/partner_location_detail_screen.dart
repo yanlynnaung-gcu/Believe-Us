@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:thae_nge_lay/core/theme/app_colors.dart';
 import 'package:thae_nge_lay/core/theme/glassmorphic_card.dart';
+import 'package:thae_nge_lay/core/utils/image_provider_helper.dart';
 import 'package:thae_nge_lay/features/home/presentation/controllers/couple_media_controller.dart';
 import 'package:thae_nge_lay/features/location_trust/domain/models/partner_location_arrival_model.dart';
 import 'package:thae_nge_lay/features/location_trust/presentation/controllers/location_detail_controller.dart';
@@ -849,7 +850,7 @@ class _PartnerLocationDetailScreenState
                         ),
                         child: CircleAvatar(
                           backgroundImage:
-                              NetworkImage(coupleMedia.partnerAvatarPath),
+                              getCustomImageProvider(coupleMedia.partnerAvatarPath),
                         ),
                       ),
                     ],
@@ -906,7 +907,7 @@ class _PartnerLocationDetailScreenState
                     ),
                     child: CircleAvatar(
                       backgroundImage:
-                          NetworkImage(coupleMedia.userAvatarPath),
+                          getCustomImageProvider(coupleMedia.userAvatarPath),
                     ),
                   ),
                   SizedBox(height: 2.h),

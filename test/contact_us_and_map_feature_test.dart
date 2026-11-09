@@ -339,23 +339,16 @@ void main() {
     });
   });
 
-  group('Feature 3: Interactive Dashboard Beating Heart', () {
-    testWidgets('InteractiveDashboardHeart responds to tap with micro-interaction and SnackBar',
+  group('Feature 3: Dashboard Dual Avatars', () {
+    testWidgets('InterlockingDualAvatars renders user and partner avatars cleanly',
         (tester) async {
       await tester.pumpWidget(createTestApp(const Scaffold(
-        body: Center(child: InteractiveDashboardHeart()),
+        body: Center(child: InterlockingDualAvatars()),
       )));
       await tester.pump();
 
-      expect(find.byType(InteractiveDashboardHeart), findsOneWidget);
-
-      // Tap the beating heart
-      await tester.tap(find.byType(InteractiveDashboardHeart));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      // Verify romantic SnackBar feedback appears
-      expect(find.textContaining('Heart Ping sent to'), findsOneWidget);
+      expect(find.byType(InterlockingDualAvatars), findsOneWidget);
+      expect(find.byType(CircleAvatar), findsNWidgets(2));
     });
   });
 
