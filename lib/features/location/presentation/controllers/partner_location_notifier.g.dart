@@ -42,7 +42,7 @@ final class PartnerLocationNotifierProvider
 }
 
 String _$partnerLocationNotifierHash() =>
-    r'15ce60870d1093c8701109fa01e64e1c2855c0b6';
+    r'80060b19cc855ab708c7d2df84eaf256638efd3b';
 
 abstract class _$PartnerLocationNotifier
     extends $Notifier<PartnerLocationStatus> {

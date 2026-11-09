@@ -214,6 +214,20 @@ class LocationDetailController extends _$LocationDetailController {
         (l) => l.departedAt == null,
         orElse: () => logs.first,
       );
+
+      final latDiff = (state.partnerLatitude - active.latitude).abs();
+      final lngDiff = (state.partnerLongitude - active.longitude).abs();
+      final hasMeaningfulChange = latDiff > 0.0001 ||
+          lngDiff > 0.0001 ||
+          state.batteryLevel != active.batteryLevel ||
+          state.isCharging != active.isCharging ||
+          state.placeName != active.placeName ||
+          state.status != active.status ||
+          state.todayArrivalLogs.length != logs.length ||
+          state.isLoading;
+
+      if (!hasMeaningfulChange) return;
+
       final dist = _calcDist(
         state.currentUserLatitude,
         state.currentUserLongitude,
@@ -237,10 +251,12 @@ class LocationDetailController extends _$LocationDetailController {
         isLoading: false,
       );
     } else {
-      state = state.copyWith(
-        todayArrivalLogs: logs,
-        isLoading: false,
-      );
+      if (state.todayArrivalLogs.isNotEmpty || state.isLoading) {
+        state = state.copyWith(
+          todayArrivalLogs: logs,
+          isLoading: false,
+        );
+      }
     }
   }
 

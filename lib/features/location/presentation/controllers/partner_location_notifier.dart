@@ -43,12 +43,24 @@ class PartnerLocationNotifier extends _$PartnerLocationNotifier {
         if (d.containsKey('placeName')) {
           _placeName = d['placeName'].toString();
         }
-        state = _calculateStatus();
+        final newStatus = _calculateStatus();
+        if (_hasStatusChanged(newStatus)) {
+          state = newStatus;
+        }
       } catch (_) {}
     });
 
     _startPeriodicUpdates();
     return _calculateStatus();
+  }
+
+  bool _hasStatusChanged(PartnerLocationStatus newStatus) {
+    return (state.latitude - newStatus.latitude).abs() > 0.0001 ||
+        (state.longitude - newStatus.longitude).abs() > 0.0001 ||
+        state.placeName != newStatus.placeName ||
+        state.batteryLevel != newStatus.batteryLevel ||
+        state.isCharging != newStatus.isCharging ||
+        (state.distanceKm ?? 0.0) != (newStatus.distanceKm ?? 0.0);
   }
 
   PartnerLocationStatus _calculateStatus() {
@@ -76,8 +88,12 @@ class PartnerLocationNotifier extends _$PartnerLocationNotifier {
   }
 
   void _startPeriodicUpdates() {
-    _pollingTimer = Timer.periodic(const Duration(seconds: 20), (_) {
-      state = _calculateStatus();
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      final newStatus = _calculateStatus();
+      if (_hasStatusChanged(newStatus)) {
+        state = newStatus;
+      }
     });
   }
 

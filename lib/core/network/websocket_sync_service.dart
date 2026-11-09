@@ -56,6 +56,16 @@ class WebSocketSyncService {
     _eventController.add(event);
   }
 
+  // High-frequency events silenced in logs to prevent CPU & console saturation
+  static const Set<String> _highFrequencyEvents = {
+    'PONG',
+    'PING',
+    'HEART_PING',
+    'HEARTBEAT',
+    'LOCATION_UPDATE',
+    'LOCATION_HEARTBEAT',
+  };
+
   void sendEvent({
     required String event,
     required Map<String, dynamic> data,
@@ -72,7 +82,9 @@ class WebSocketSyncService {
           'data': data,
         });
         _channel!.sink.add(payload);
-        debugPrint('[WebSocket] Sent event $event: $payload');
+        if (kDebugMode && !_highFrequencyEvents.contains(event.toUpperCase())) {
+          debugPrint('[WebSocket] Sent event $event: $payload');
+        }
       } catch (e) {
         debugPrint('[WebSocket] Send event error: $e');
       }
@@ -167,7 +179,7 @@ class WebSocketSyncService {
 
   void _startPing() {
     _pingTimer?.cancel();
-    _pingTimer = Timer.periodic(const Duration(seconds: 25), (_) {
+    _pingTimer = Timer.periodic(const Duration(seconds: 35), (_) {
       if (_channel != null) {
         try {
           _channel!.sink.add(jsonEncode({'action': 'PING'}));
@@ -183,7 +195,9 @@ class WebSocketSyncService {
       final topic = json['topic'] as String?;
       final spaceId = json['coupleSpaceId'] as String?;
 
-      debugPrint('[WebSocket Event Received] $event: $json');
+      if (kDebugMode && !_highFrequencyEvents.contains(event.toUpperCase())) {
+        debugPrint('[WebSocket Event Received] $event: $json');
+      }
 
       final eventData = json.containsKey('data') && json['data'] is Map<String, dynamic>
           ? json['data'] as Map<String, dynamic>

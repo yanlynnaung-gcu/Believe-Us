@@ -10,7 +10,8 @@ class UnseenGiftsNotifier extends Notifier<int> {
 
   @override
   int build() {
-    final user = ref.watch(authStateProvider);
+    final spaceId = ref.watch(authStateProvider.select((u) => u?.coupleSpaceId));
+    final userId = ref.watch(authStateProvider.select((u) => u?.id));
     final ws = ref.watch(webSocketSyncServiceProvider);
     final repo = ref.watch(giftingRepositoryProvider);
 
@@ -22,10 +23,7 @@ class UnseenGiftsNotifier extends Notifier<int> {
       _giftSeenSub?.cancel();
     });
 
-    if (user != null && user.coupleSpaceId != null && user.coupleSpaceId!.isNotEmpty) {
-      final spaceId = user.coupleSpaceId!;
-      final userId = user.id;
-
+    if (spaceId != null && spaceId.isNotEmpty && userId != null) {
       // 1. Initial count from backend
       Future.microtask(() async {
         final result = await repo.getUnseenGiftsCount(
@@ -35,7 +33,7 @@ class UnseenGiftsNotifier extends Notifier<int> {
         result.fold(
           (_) {},
           (count) {
-            state = count;
+            if (state != count) state = count;
           },
         );
       });
@@ -53,7 +51,7 @@ class UnseenGiftsNotifier extends Notifier<int> {
       // 3. Listen for GIFT_SEEN WebSocket events
       _giftSeenSub = ws.onEvent('GIFT_SEEN').listen((e) {
         final receiverId = e.data['receiverId'];
-        if (receiverId == null || receiverId == userId) {
+        if ((receiverId == null || receiverId == userId) && state != 0) {
           state = 0;
         }
       });

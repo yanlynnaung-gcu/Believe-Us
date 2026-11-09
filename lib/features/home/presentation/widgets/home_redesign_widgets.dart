@@ -395,7 +395,7 @@ class LivePartnerTrustPill extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(partnerLocationProvider);
-    final media = ref.watch(coupleMediaProvider);
+    final partnerAvatarPath = ref.watch(coupleMediaProvider.select((m) => m.partnerAvatarPath));
 
     return GlassmorphicCard(
       margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
@@ -408,7 +408,7 @@ class LivePartnerTrustPill extends ConsumerWidget {
             children: [
               CircleAvatar(
                 radius: 20.r,
-                backgroundImage: getCustomImageProvider(media.partnerAvatarPath),
+                backgroundImage: getCustomImageProvider(partnerAvatarPath),
               ),
               Positioned(
                 bottom: 0,
@@ -783,14 +783,14 @@ class _FloatingGlassNavBarState extends ConsumerState<FloatingGlassNavBar>
   Widget build(BuildContext context) {
     final unreadMessagesCount = ref.watch(unreadMessagesProvider);
     final unseenGiftsCount = ref.watch(unseenGiftsProvider);
-    final movementState = ref.watch(partnerMovementStatusProvider);
+    final isMoving = ref.watch(partnerMovementStatusProvider.select((s) => s.isMoving));
 
     final tabs = [
       (icon: LucideIcons.heart, label: 'Us'),
       (icon: LucideIcons.messageCircle, label: 'Love Chat'),
       (
         icon: LucideIcons.mapPin,
-        label: movementState.isMoving ? 'Moving' : 'Where You Are'
+        label: isMoving ? 'Moving' : 'Where You Are'
       ),
       (icon: LucideIcons.gift, label: 'Surprise Gift'),
     ];
@@ -844,7 +844,7 @@ class _FloatingGlassNavBarState extends ConsumerState<FloatingGlassNavBar>
                     isSelected: isSelected,
                     unreadMessagesCount: unreadMessagesCount,
                     unseenGiftsCount: unseenGiftsCount,
-                    movementState: movementState,
+                    isMoving: isMoving,
                   ),
                   if (isSelected) ...[
                     SizedBox(width: 6.w),
@@ -872,7 +872,7 @@ class _FloatingGlassNavBarState extends ConsumerState<FloatingGlassNavBar>
     required bool isSelected,
     required int unreadMessagesCount,
     required int unseenGiftsCount,
-    required PartnerMovementStatusState movementState,
+    required bool isMoving,
   }) {
     final baseIcon = Icon(
       icon,
@@ -935,7 +935,7 @@ class _FloatingGlassNavBarState extends ConsumerState<FloatingGlassNavBar>
 
     // Tab 2: Close to You / Location -> Live Movement Indicator Pill
     if (index == 2) {
-      if (!movementState.isMoving) return baseIcon;
+      if (!isMoving) return baseIcon;
 
       return Stack(
         clipBehavior: Clip.none,

@@ -11,7 +11,8 @@ class UnreadMessagesNotifier extends Notifier<int> {
 
   @override
   int build() {
-    final user = ref.watch(authStateProvider);
+    final spaceId = ref.watch(authStateProvider.select((u) => u?.coupleSpaceId));
+    final userId = ref.watch(authStateProvider.select((u) => u?.id));
     final ws = ref.watch(webSocketSyncServiceProvider);
     final chatRepo = ref.watch(chatRepositoryProvider);
 
@@ -25,10 +26,7 @@ class UnreadMessagesNotifier extends Notifier<int> {
       _readSub?.cancel();
     });
 
-    if (user != null && user.coupleSpaceId != null && user.coupleSpaceId!.isNotEmpty) {
-      final spaceId = user.coupleSpaceId!;
-      final userId = user.id;
-
+    if (spaceId != null && spaceId.isNotEmpty && userId != null) {
       // 1. Initial count from backend / repository
       Future.microtask(() async {
         final result = await chatRepo.getUnreadCount(
@@ -38,7 +36,7 @@ class UnreadMessagesNotifier extends Notifier<int> {
         result.fold(
           (_) {},
           (count) {
-            state = count;
+            if (state != count) state = count;
           },
         );
       });
@@ -49,7 +47,8 @@ class UnreadMessagesNotifier extends Notifier<int> {
         final targetReceiver = e.data['receiverId'];
         if (targetReceiver == null || targetReceiver == userId) {
           if (rawCount is num) {
-            state = rawCount.toInt();
+            final count = rawCount.toInt();
+            if (state != count) state = count;
           }
         }
       });
@@ -66,7 +65,7 @@ class UnreadMessagesNotifier extends Notifier<int> {
       // 4. Listen for MESSAGES_READ events
       _readSub = ws.onEvent('MESSAGES_READ').listen((e) {
         final readBy = e.data['readBy'];
-        if (readBy == userId) {
+        if (readBy == userId && state != 0) {
           state = 0;
         }
       });

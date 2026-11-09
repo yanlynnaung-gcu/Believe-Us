@@ -8,15 +8,18 @@ part 'api_client.g.dart';
 
 /// Configuration & Base URL resolution for Thae Thae Real-Time Multi-Device Sync
 class ApiEndpoints {
-  /// Detected MacBook LAN IP on local Wi-Fi
+  /// Railway Production Base URL
+  static const String defaultProductionUrl =
+      'https://believe-us-production.up.railway.app';
+
+  /// Local Testing IP (Fallback when local)
   static const String defaultLanIp = '192.168.1.6';
   static const int defaultPort = 8080;
   static const int defaultMqttPort = 1883;
 
   /// Resolves the host for API & WebSocket:
   /// 1. `--dart-define=API_HOST=<LAN_IP>` (Explicit override)
-  /// 2. Defaults to MacBook LAN IP (192.168.1.6) so BOTH the Android Emulator
-  ///    and physical phone connected to the same Wi-Fi hit the exact same server!
+  /// 2. Defaults to MacBook LAN IP (192.168.1.6)
   static String get host {
     const customHost = String.fromEnvironment('API_HOST');
     if (customHost.isNotEmpty) {
@@ -62,6 +65,12 @@ class ApiEndpoints {
     if (customWsUrl.isNotEmpty) {
       return customWsUrl;
     }
+
+    if (baseUrl.contains('up.railway.app') || baseUrl.startsWith('https://')) {
+      final uri = Uri.parse(baseUrl);
+      return 'wss://${uri.host}/ws';
+    }
+
     return 'ws://$host:$port/ws';
   }
 
@@ -152,7 +161,8 @@ class DioExponentialBackoffRetryInterceptor extends Interceptor {
     // Server restart or temporary gateway failure (500, 502, 503, 504)
     if (err.response != null) {
       final code = err.response!.statusCode;
-      if (code != null && (code == 500 || code == 502 || code == 503 || code == 504)) {
+      if (code != null &&
+          (code == 500 || code == 502 || code == 503 || code == 504)) {
         return true;
       }
     }
@@ -161,16 +171,22 @@ class DioExponentialBackoffRetryInterceptor extends Interceptor {
   }
 
   @override
-  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
     var currentErr = err;
-    int currentRetry = (currentErr.requestOptions.extra['retry_count'] as int? ?? 0);
+    int currentRetry =
+        (currentErr.requestOptions.extra['retry_count'] as int? ?? 0);
 
     while (currentRetry < maxRetries && _isRetryable(currentErr)) {
       currentRetry++;
       final jitterMs = _random.nextInt(150);
-      final delayMs = (initialDelay.inMilliseconds * pow(2, currentRetry - 1))
-          .clamp(0, maxDelay.inMilliseconds)
-          .toInt() + jitterMs;
+      final delayMs =
+          (initialDelay.inMilliseconds * pow(2, currentRetry - 1))
+              .clamp(0, maxDelay.inMilliseconds)
+              .toInt() +
+          jitterMs;
 
       debugPrint(
         '[DioRetry] Transient error on ${currentErr.requestOptions.path} (${currentErr.type}). '
@@ -183,10 +199,7 @@ class DioExponentialBackoffRetryInterceptor extends Interceptor {
         final requestOptions = currentErr.requestOptions;
         final response = await dio.fetch<dynamic>(
           requestOptions.copyWith(
-            extra: {
-              ...requestOptions.extra,
-              'retry_count': currentRetry,
-            },
+            extra: {...requestOptions.extra, 'retry_count': currentRetry},
           ),
         );
 
@@ -228,12 +241,17 @@ Dio dioClient(Ref ref) {
   // 2. Exponential Backoff Auto-Retry on network failures/server restarts
   dio.interceptors.add(DioExponentialBackoffRetryInterceptor(dio: dio));
 
-  // 3. Debug logging in dev mode
+  // 3. Debug logging in dev mode (error-only by default to prevent console spam & CPU heat)
   if (kDebugMode) {
+    const bool verboseDioLogs = bool.fromEnvironment('VERBOSE_DIO_LOGS', defaultValue: false);
     dio.interceptors.add(
       LogInterceptor(
-        requestBody: true,
-        responseBody: true,
+        request: verboseDioLogs,
+        requestHeader: verboseDioLogs,
+        requestBody: verboseDioLogs,
+        responseHeader: verboseDioLogs,
+        responseBody: verboseDioLogs,
+        error: true,
         logPrint: (obj) => debugPrint('[Dio] $obj'),
       ),
     );

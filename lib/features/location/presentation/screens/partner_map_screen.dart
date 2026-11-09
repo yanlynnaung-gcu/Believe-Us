@@ -17,6 +17,7 @@ import 'package:thae_nge_lay/core/theme/glassmorphic_card.dart';
 import 'package:thae_nge_lay/core/utils/image_provider_helper.dart';
 import 'package:thae_nge_lay/features/home/presentation/controllers/couple_media_controller.dart';
 import 'package:thae_nge_lay/features/location/data/services/location_service.dart';
+import 'package:thae_nge_lay/features/location/domain/models/location_data.dart';
 import 'package:thae_nge_lay/features/location/presentation/controllers/partner_location_notifier.dart';
 import 'package:thae_nge_lay/features/location/presentation/utils/romantic_marker_generator.dart';
 
@@ -87,6 +88,16 @@ class _PartnerMapScreenState extends ConsumerState<PartnerMapScreen>
       curve: Curves.easeInOutCubic,
     )..addListener(_onMoveAnimationTick);
 
+    _moveAnimationController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        if (_isAutoTracking && _mapController != null && _currentPartnerLatLng != null) {
+          _mapController!.animateCamera(
+            CameraUpdate.newLatLng(_currentPartnerLatLng!),
+          );
+        }
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initLocationsAndSubscriptions();
     });
@@ -102,8 +113,19 @@ class _PartnerMapScreenState extends ConsumerState<PartnerMapScreen>
     super.dispose();
   }
 
+  int _lastTickMs = 0;
+
   void _onMoveAnimationTick() {
     if (_startPartnerLatLng == null || _targetPartnerLatLng == null) return;
+
+    // Throttle marker position updates to ~12fps (every 80ms) to avoid CPU-spinning setState
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final isDone = _moveAnimationController.isCompleted;
+    if (!isDone && (now - _lastTickMs < 80)) {
+      return;
+    }
+    _lastTickMs = now;
+
     final t = _moveAnimation?.value ?? 1.0;
 
     final lat = ui.lerpDouble(
@@ -117,16 +139,10 @@ class _PartnerMapScreenState extends ConsumerState<PartnerMapScreen>
       t,
     );
 
-    if (lat != null && lng != null) {
+    if (lat != null && lng != null && mounted) {
       setState(() {
         _currentPartnerLatLng = LatLng(lat, lng);
       });
-
-      if (_isAutoTracking && _mapController != null) {
-        _mapController!.animateCamera(
-          CameraUpdate.newLatLng(_currentPartnerLatLng!),
-        );
-      }
     }
   }
 
@@ -155,9 +171,14 @@ class _PartnerMapScreenState extends ConsumerState<PartnerMapScreen>
     try {
       _userLocationSub = locationSvc.getPositionStream().listen((pos) {
         if (!mounted) return;
-        setState(() {
-          _userLatLng = LatLng(pos.latitude, pos.longitude);
-        });
+        final newLatLng = LatLng(pos.latitude, pos.longitude);
+        if (_userLatLng == null ||
+            (_userLatLng!.latitude - newLatLng.latitude).abs() > 0.0001 ||
+            (_userLatLng!.longitude - newLatLng.longitude).abs() > 0.0001) {
+          setState(() {
+            _userLatLng = newLatLng;
+          });
+        }
       });
     } catch (_) {}
 
@@ -216,11 +237,11 @@ class _PartnerMapScreenState extends ConsumerState<PartnerMapScreen>
       return;
     }
 
-    // Check if location changed meaningfully (more than ~1 meter)
+    // Check if location changed meaningfully (more than ~10 meters)
     final latDiff = (_currentPartnerLatLng!.latitude - newCoords.latitude).abs();
     final lngDiff =
         (_currentPartnerLatLng!.longitude - newCoords.longitude).abs();
-    if (latDiff < 0.00001 && lngDiff < 0.00001) return;
+    if (latDiff < 0.0001 && lngDiff < 0.0001) return;
 
     _startPartnerLatLng = _currentPartnerLatLng;
     _targetPartnerLatLng = newCoords;
@@ -383,12 +404,13 @@ class _PartnerMapScreenState extends ConsumerState<PartnerMapScreen>
     final partner = ref.watch(partnerLocationProvider);
     final media = ref.watch(coupleMediaProvider);
 
-    // Keep partner coordinate in sync with state notifier if WebSocket update occurs
-    if (_targetPartnerLatLng == null ||
-        _targetPartnerLatLng!.latitude != partner.latitude ||
-        _targetPartnerLatLng!.longitude != partner.longitude) {
-      _smoothMovePartnerTo(LatLng(partner.latitude, partner.longitude));
-    }
+    ref.listen<PartnerLocationStatus>(partnerLocationProvider, (prev, next) {
+      if (prev == null ||
+          (prev.latitude - next.latitude).abs() > 0.0001 ||
+          (prev.longitude - next.longitude).abs() > 0.0001) {
+        _smoothMovePartnerTo(LatLng(next.latitude, next.longitude));
+      }
+    });
 
     final partnerPos =
         _currentPartnerLatLng ?? LatLng(partner.latitude, partner.longitude);

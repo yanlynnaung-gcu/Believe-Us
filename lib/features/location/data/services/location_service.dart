@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:battery_plus/battery_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -48,7 +49,7 @@ class LocationService {
 
       return await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
+          accuracy: LocationAccuracy.medium,
           timeLimit: Duration(seconds: 10),
         ),
       );
@@ -69,11 +70,32 @@ class LocationService {
     }
   }
 
+  /// Platform-throttled position stream: uses balanced/medium accuracy and 25m distance filter
+  /// On Android, enforces a 10s interval to prevent CPU spinning on emulators/devices.
   Stream<Position> getPositionStream() {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return Geolocator.getPositionStream(
+        locationSettings: AndroidSettings(
+          accuracy: LocationAccuracy.medium,
+          distanceFilter: 25,
+          intervalDuration: const Duration(seconds: 10),
+        ),
+      );
+    } else if (defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      return Geolocator.getPositionStream(
+        locationSettings: AppleSettings(
+          accuracy: LocationAccuracy.medium,
+          distanceFilter: 25,
+          pauseLocationUpdatesAutomatically: true,
+          activityType: ActivityType.other,
+        ),
+      );
+    }
     return Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 20, // Notify every 20 meters
+        accuracy: LocationAccuracy.medium,
+        distanceFilter: 25,
       ),
     );
   }

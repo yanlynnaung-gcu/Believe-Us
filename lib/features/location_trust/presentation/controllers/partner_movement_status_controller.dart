@@ -54,14 +54,21 @@ class PartnerMovementStatusNotifier
         final placeName = e.data['placeName']?.toString();
         final address = e.data['addressLine']?.toString();
         final place = placeName ?? address ?? (isMoving ? 'Moving' : 'Stationary');
+        final placeLabel = isMoving ? 'Moving (${speed.toStringAsFixed(0)} km/h)' : place;
+        final newStatus = isMoving ? MovementStatus.moving : MovementStatus.stationary;
 
-        state = state.copyWith(
-          isMoving: isMoving,
-          speedKmh: speed,
-          placeLabel: isMoving ? 'Moving (${speed.toStringAsFixed(0)} km/h)' : place,
-          status: isMoving ? MovementStatus.moving : MovementStatus.stationary,
-          lastUpdated: DateTime.now(),
-        );
+        if (state.isMoving != isMoving ||
+            (state.speedKmh - speed).abs() > 0.5 ||
+            state.placeLabel != placeLabel ||
+            state.status != newStatus) {
+          state = state.copyWith(
+            isMoving: isMoving,
+            speedKmh: speed,
+            placeLabel: placeLabel,
+            status: newStatus,
+            lastUpdated: DateTime.now(),
+          );
+        }
       } catch (_) {}
     });
 

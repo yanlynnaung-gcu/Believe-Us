@@ -182,7 +182,8 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(authStateProvider);
+    final partnerId = ref.watch(authStateProvider.select((u) => u?.partnerId));
+    final coupleSpaceId = ref.watch(authStateProvider.select((u) => u?.coupleSpaceId));
 
     // In-App Notification Banner Listener
     ref.listen<AsyncValue<CoupleNotification>>(
@@ -269,8 +270,8 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
               // TAB 0: "Us" (Home Sanctuary)
               _buildUsSanctuaryView(
                 context,
-                user?.partnerId,
-                user?.coupleSpaceId,
+                partnerId,
+                coupleSpaceId,
                 bottomNavHeight: bottomNavHeight,
                 safeAreaBottom: safeAreaBottom,
               ),
@@ -338,7 +339,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
     required double bottomNavHeight,
     required double safeAreaBottom,
   }) {
-    final history = ref.watch(fcmNotificationServiceProvider).history;
+    final alertsCount = ref.watch(fcmNotificationServiceProvider.select((s) => s.history.length));
 
     return SingleChildScrollView(
       padding: EdgeInsets.only(
@@ -495,7 +496,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                       GestureDetector(
                         onTap: () => _showNotificationHistory(context),
                         child: Text(
-                          '${history.length} alerts',
+                          '$alertsCount alerts',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11.sp,
                             color: BelieveColors.primary,

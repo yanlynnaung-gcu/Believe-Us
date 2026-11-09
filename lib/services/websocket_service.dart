@@ -124,7 +124,6 @@ class WebSocketService {
       topic: topic,
       data: payload,
     );
-    debugPrint('[WebSocketService] Dispatched Location Heartbeat ($latitude, $longitude) to $topic');
   }
 
   /// Sends active couple chat message

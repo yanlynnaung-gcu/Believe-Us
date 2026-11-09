@@ -82,9 +82,9 @@ class PairingController extends _$PairingController {
       }
     });
 
-    // 2. Continuous 2.5s polling fallback to ensure 100% reliable 2-device pairing sync
+    // 2. Throttled 5s polling fallback to ensure reliable 2-device pairing sync without spinning CPU
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       _checkPairingStatus();
     });
   }
