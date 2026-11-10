@@ -59,5 +59,7 @@ public class WebCorsConfig implements WebMvcConfigurer {
                 .addResourceLocations("file:" + uploadPath + "/avatars/");
         registry.addResourceHandler("/covers/**")
                 .addResourceLocations("file:" + uploadPath + "/covers/");
+        registry.addResourceHandler("/audio/**")
+                .addResourceLocations("file:" + uploadPath + "/audio/");
     }
 }

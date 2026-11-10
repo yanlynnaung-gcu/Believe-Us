@@ -48,6 +48,16 @@ public class ChatMessageDto {
             } catch (Exception ignored) {}
         }
 
+        String audioPath = entity.getAudioPath();
+        if (audioPath != null && !audioPath.isBlank()) {
+            audioPath = audioPath.trim();
+            if (audioPath.startsWith("file:///uploads/")) {
+                audioPath = audioPath.substring("file://".length());
+            } else if (audioPath.startsWith("file://uploads/")) {
+                audioPath = audioPath.substring("file://".length());
+            }
+        }
+
         return ChatMessageDto.builder()
                 .id(entity.getId())
                 .senderId(entity.getSenderId())
@@ -55,7 +65,7 @@ public class ChatMessageDto {
                 .coupleSpaceId(entity.getCoupleSpaceId())
                 .type(entity.getType() != null ? entity.getType().toLowerCase() : "text")
                 .text(entity.getText())
-                .audioPath(entity.getAudioPath())
+                .audioPath(audioPath)
                 .audioDurationSeconds(entity.getAudioDurationSeconds())
                 .waveformSamples(waveforms)
                 .giftData(gift)

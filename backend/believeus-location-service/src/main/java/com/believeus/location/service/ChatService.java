@@ -54,6 +54,17 @@ public class ChatService {
             } catch (Exception ignored) {}
         }
 
+        // Sanitize audioPath if present (strips any invalid file:// prefixes)
+        String audioPath = dto.getAudioPath();
+        if (audioPath != null && !audioPath.isBlank()) {
+            audioPath = audioPath.trim();
+            if (audioPath.startsWith("file:///uploads/")) {
+                audioPath = audioPath.substring("file://".length());
+            } else if (audioPath.startsWith("file://uploads/")) {
+                audioPath = audioPath.substring("file://".length());
+            }
+        }
+
         ChatMessageEntity entity = ChatMessageEntity.builder()
                 .id(msgId)
                 .senderId(dto.getSenderId())
@@ -61,7 +72,7 @@ public class ChatService {
                 .coupleSpaceId(dto.getCoupleSpaceId())
                 .type(dto.getType() != null ? dto.getType().toLowerCase() : "text")
                 .text(dto.getText())
-                .audioPath(dto.getAudioPath())
+                .audioPath(audioPath)
                 .audioDurationSeconds(dto.getAudioDurationSeconds())
                 .waveformSamplesJson(waveformsJson)
                 .giftDataJson(giftJson)

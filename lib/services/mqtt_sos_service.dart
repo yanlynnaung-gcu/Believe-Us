@@ -26,6 +26,7 @@ class MqttSosService {
   final List<EmergencySOSAlert> _publishedAlertsForTesting = [];
   bool _mockConnectedForTesting = false;
   Timer? _connectTimeoutTimer;
+  DateTime? _lastConnectFailure;
 
   Stream<EmergencySOSAlert> get sosAlertStream => _sosAlertController.stream;
 
@@ -77,7 +78,21 @@ class MqttSosService {
     if (_isConnecting || isConnected) return isConnected;
     if (_userId == null) return false;
 
+    // Cooldown check: if recent connection failed, throttle retries to prevent CPU spinning
+    if (_lastConnectFailure != null &&
+        DateTime.now().difference(_lastConnectFailure!).inSeconds < 10) {
+      return false;
+    }
+
     _isConnecting = true;
+
+    // Clean up any existing or dead client before instantiating a new one
+    if (_client != null) {
+      try {
+        _client!.disconnect();
+      } catch (_) {}
+      _client = null;
+    }
 
     try {
       final host = ApiEndpoints.mqttBrokerHost;
@@ -112,7 +127,7 @@ class MqttSosService {
 
       final completer = Completer<MqttClientConnectionStatus?>();
       _connectTimeoutTimer?.cancel();
-      _connectTimeoutTimer = Timer(const Duration(milliseconds: 1000), () {
+      _connectTimeoutTimer = Timer(const Duration(milliseconds: 1500), () {
         if (!completer.isCompleted) completer.complete(null);
       });
 
@@ -128,18 +143,29 @@ class MqttSosService {
       _isConnecting = false;
 
       if (status?.state == MqttConnectionState.connected) {
+        _lastConnectFailure = null;
         _subscribeToEmergencyTopic();
         _listenToIncomingUpdates();
         _flushOfflineQueue();
         return true;
       } else {
+        _lastConnectFailure = DateTime.now();
         debugPrint(
           '[MqttSosService] Connection status not connected: ${status?.state}',
         );
+        try {
+          _client?.disconnect();
+        } catch (_) {}
+        _client = null;
         return false;
       }
     } catch (e) {
       _isConnecting = false;
+      _lastConnectFailure = DateTime.now();
+      try {
+        _client?.disconnect();
+      } catch (_) {}
+      _client = null;
       debugPrint('[MqttSosService] Connection failed (will auto-retry): $e');
       return false;
     }

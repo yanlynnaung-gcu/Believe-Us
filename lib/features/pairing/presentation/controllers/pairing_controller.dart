@@ -44,11 +44,13 @@ class PairingUIState {
 class PairingController extends _$PairingController {
   Timer? _pollTimer;
   StreamSubscription? _wsSub;
+  bool _isCheckingStatus = false;
 
   @override
   PairingUIState build() {
     ref.onDispose(() {
       _pollTimer?.cancel();
+      _pollTimer = null;
       _wsSub?.cancel();
     });
 
@@ -73,6 +75,8 @@ class PairingController extends _$PairingController {
       final partnerId = user1 == user.id ? user2 : user1;
 
       if (partnerId != null && spaceId != null) {
+        _pollTimer?.cancel();
+        _pollTimer = null;
         await ref.read(authStateProvider.notifier).pairPartner(
               partnerId: partnerId,
               coupleSpaceId: spaceId,
@@ -82,42 +86,48 @@ class PairingController extends _$PairingController {
       }
     });
 
-    // 2. Throttled 5s polling fallback to ensure reliable 2-device pairing sync without spinning CPU
+    // 2. Throttled 10s polling fallback to prevent request storms during Railway cold starts
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       _checkPairingStatus();
     });
   }
 
   Future<void> _checkPairingStatus() async {
     final user = ref.read(authStateProvider);
-    if (user == null || state.isPaired) return;
+    if (user == null || state.isPaired || _isCheckingStatus) return;
 
-    final repo = ref.read(pairingRepositoryProvider);
-    final result = await repo.checkPairingStatus(user.id);
+    _isCheckingStatus = true;
+    try {
+      final repo = ref.read(pairingRepositoryProvider);
+      final result = await repo.checkPairingStatus(user.id);
 
-    result.fold(
-      (_) => null,
-      (data) async {
-        final isPaired = data['isPaired'] == true;
-        if (isPaired && data.containsKey('coupleSpace') && data['coupleSpace'] is Map) {
-          final spaceMap = data['coupleSpace'] as Map;
-          final partnerId = data['partnerId']?.toString() ??
-              (spaceMap['user1Id'] == user.id ? spaceMap['user2Id'] : spaceMap['user1Id']);
-          final spaceId = spaceMap['id']?.toString();
+      result.fold(
+        (_) => null,
+        (data) async {
+          final isPaired = data['isPaired'] == true;
+          if (isPaired && data.containsKey('coupleSpace') && data['coupleSpace'] is Map) {
+            final spaceMap = data['coupleSpace'] as Map;
+            final partnerId = data['partnerId']?.toString() ??
+                (spaceMap['user1Id'] == user.id ? spaceMap['user2Id'] : spaceMap['user1Id']);
+            final spaceId = spaceMap['id']?.toString();
 
-          if (partnerId != null && spaceId != null) {
-            _pollTimer?.cancel();
-            await ref.read(authStateProvider.notifier).pairPartner(
-                  partnerId: partnerId,
-                  coupleSpaceId: spaceId,
-                );
-            await ref.read(coupleMediaProvider.notifier).syncCoupleSummary();
-            state = state.copyWith(isPaired: true);
+            if (partnerId != null && spaceId != null) {
+              _pollTimer?.cancel();
+              _pollTimer = null;
+              await ref.read(authStateProvider.notifier).pairPartner(
+                    partnerId: partnerId,
+                    coupleSpaceId: spaceId,
+                  );
+              await ref.read(coupleMediaProvider.notifier).syncCoupleSummary();
+              state = state.copyWith(isPaired: true);
+            }
           }
-        }
-      },
-    );
+        },
+      );
+    } finally {
+      _isCheckingStatus = false;
+    }
   }
 
   Future<void> _loadInviteCode() async {

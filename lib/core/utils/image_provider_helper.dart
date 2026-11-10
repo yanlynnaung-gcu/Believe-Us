@@ -70,6 +70,62 @@ String _prependBaseUrl(String relativePath) {
   return '$base$path';
 }
 
+/// Resolves an audio path (relative or absolute) into a valid absolute URL or local file path.
+///
+/// - If [path] is null or blank, returns null.
+/// - If [path] is already an HTTP or HTTPS URL, returns it trimmed.
+/// - If [path] starts with 'file:///uploads/' or 'file://uploads/', it strips 'file://'
+///   and prepends [ApiEndpoints.baseUrl].
+/// - If [path] points to an existing file on the local filesystem, returns the clean file path.
+/// - If [path] is a relative path (e.g. '/uploads/audio/...' or 'uploads/audio/...'),
+///   it prepends [ApiEndpoints.baseUrl] to form a valid HTTP streaming URL.
+String? getAudioUrl(String? path) {
+  if (path == null) return null;
+  final trimmed = path.trim();
+  if (trimmed.isEmpty) return null;
+
+  // 1. Already an absolute HTTP or HTTPS URL
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+
+  // 2. Handle 'file:///uploads/' or 'file://uploads/'
+  if (trimmed.startsWith('file:///uploads/')) {
+    final sub = trimmed.substring('file://'.length);
+    return _prependBaseUrl(sub);
+  }
+  if (trimmed.startsWith('file://uploads/')) {
+    final sub = trimmed.substring('file://'.length);
+    return _prependBaseUrl(sub);
+  }
+
+  // 3. Genuine local file on the device
+  String localCandidate = trimmed;
+  if (localCandidate.startsWith('file://')) {
+    localCandidate = localCandidate.replaceFirst('file://', '');
+  }
+  try {
+    final file = File(localCandidate);
+    if (file.existsSync()) {
+      return file.path;
+    }
+  } catch (_) {}
+
+  // 4. Relative backend path (e.g. '/uploads/audio/...' or 'uploads/audio/...')
+  if (trimmed.startsWith('/uploads/') ||
+      trimmed.startsWith('uploads/') ||
+      trimmed.startsWith('/audio/') ||
+      trimmed.startsWith('audio/')) {
+    return _prependBaseUrl(trimmed);
+  }
+
+  if (trimmed.startsWith('/')) {
+    return _prependBaseUrl(trimmed);
+  }
+
+  return trimmed;
+}
+
 /// Returns a suitable [ImageProvider] for a given [path].
 ///
 /// Seamlessly handles:

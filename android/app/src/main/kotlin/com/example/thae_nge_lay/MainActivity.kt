@@ -1,4 +1,4 @@
-package com.example.thae_nge_lay
+package com.yla.thae_nge_lay
 
 import android.view.KeyEvent
 import io.flutter.embedding.android.FlutterActivity
@@ -7,7 +7,7 @@ import io.flutter.plugin.common.EventChannel
 
 class MainActivity : FlutterActivity() {
 
-    private val VOLUME_BUTTON_CHANNEL = "com.example.thae_nge_lay/volume_button"
+    private val VOLUME_BUTTON_CHANNEL = "com.yla.thae_nge_lay/volume_button"
     private var eventSink: EventChannel.EventSink? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

@@ -28,5 +28,9 @@ public class DataInitializer implements CommandLineRunner {
         if (!coversDir.exists()) {
             coversDir.mkdirs();
         }
+        File audioDir = new File("./uploads/audio");
+        if (!audioDir.exists()) {
+            audioDir.mkdirs();
+        }
     }
 }

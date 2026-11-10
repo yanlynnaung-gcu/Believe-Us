@@ -111,7 +111,13 @@ class PairingRemoteDataSourceImpl implements PairingRemoteDataSource {
   @override
   Future<Map<String, dynamic>> checkPairingStatus(String userId) async {
     try {
-      final response = await _dio.get('${ApiEndpoints.pairingStatusPath}/$userId');
+      final response = await _dio.get(
+        '${ApiEndpoints.pairingStatusPath}/$userId',
+        options: Options(
+          extra: {'disable_retry': true},
+          receiveTimeout: const Duration(seconds: 8),
+        ),
+      );
       if (response.statusCode == 200 && response.data is Map) {
         return Map<String, dynamic>.from(response.data as Map);
       }

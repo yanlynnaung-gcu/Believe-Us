@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:thae_nge_lay/core/utils/image_provider_helper.dart';
 
 part 'audio_playback_service.g.dart';
 
@@ -76,6 +78,8 @@ class AudioPlaybackService {
 
   Future<void> playAudio(String path) async {
     try {
+      final resolvedPath = getAudioUrl(path) ?? path;
+
       if (_currentState.activeAudioPath == path) {
         if (_currentState.isPlaying) {
           await _player.pause();
@@ -92,13 +96,17 @@ class AudioPlaybackService {
       );
       _stateController.add(_currentState);
 
-      if (path.startsWith('http')) {
-        await _player.setUrl(path);
+      if (resolvedPath.startsWith('http://') || resolvedPath.startsWith('https://')) {
+        await _player.setUrl(resolvedPath);
       } else {
-        await _player.setFilePath(path);
+        final cleanFilePath = resolvedPath.startsWith('file://')
+            ? resolvedPath.replaceFirst('file://', '')
+            : resolvedPath;
+        await _player.setFilePath(cleanFilePath);
       }
       await _player.play();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[AudioPlaybackService] Playback error for $path: $e');
       _currentState = const PlaybackState();
       _stateController.add(_currentState);
     }

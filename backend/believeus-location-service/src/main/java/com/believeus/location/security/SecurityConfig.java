@@ -34,7 +34,7 @@ public class SecurityConfig {
                         // Public endpoints: Auth, WebSocket Handshake, Uploads, H2 Console
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
-                        .requestMatchers("/uploads/**", "/avatars/**", "/covers/**").permitAll()
+                        .requestMatchers("/uploads/**", "/avatars/**", "/covers/**", "/audio/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

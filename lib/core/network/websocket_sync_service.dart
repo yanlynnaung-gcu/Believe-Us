@@ -34,7 +34,7 @@ class WebSocketSyncService {
 
   // Exponential Backoff Auto-Reconnection Configuration
   int _reconnectAttempts = 0;
-  static const int _initialRetryDelayMs = 1000; // 1 second
+  static const int _initialRetryDelayMs = 2500; // 2.5 seconds to tolerate Railway cold starts
   static const int _maxRetryDelayMs = 30000;    // 30 seconds
   static const double _backoffMultiplier = 1.5;
   final Random _random = Random();
@@ -96,7 +96,7 @@ class WebSocketSyncService {
     _currentCoupleSpaceId = coupleSpaceId;
 
     if (changed) {
-      if (_channel != null) {
+      if (_channel != null && isConnected) {
         _subscribe();
       } else if (userId != null) {
         connect();
@@ -113,8 +113,16 @@ class WebSocketSyncService {
       debugPrint('[WebSocket] Connecting to $uri (Attempt $_reconnectAttempts) ...');
 
       _channel = WebSocketChannel.connect(uri);
-      _channel?.ready.catchError((error) {
+
+      _channel?.ready.then((_) {
+        _isConnecting = false;
+        _reconnectAttempts = 0;
+        debugPrint('[WebSocket] Handshake succeeded.');
+        _subscribe();
+        _startPing();
+      }).catchError((error) {
         debugPrint('[WebSocket] Handshake Error: $error');
+        _scheduleExponentialReconnect();
       });
 
       _subscription = _channel!.stream.listen(
@@ -133,9 +141,6 @@ class WebSocketSyncService {
         },
         cancelOnError: true,
       );
-
-      _subscribe();
-      _startPing();
     } catch (e) {
       debugPrint('[WebSocket] Connect exception: $e');
       _scheduleExponentialReconnect();
@@ -218,9 +223,13 @@ class WebSocketSyncService {
   void _scheduleExponentialReconnect() {
     _isConnecting = false;
     _cleanup();
-    _reconnectTimer?.cancel();
 
     if (_currentUserId == null) return;
+
+    // Prevent duplicate reconnection triggers if a reconnect timer is already active
+    if (_reconnectTimer != null && _reconnectTimer!.isActive) {
+      return;
+    }
 
     // Calculate delay with exponential backoff and randomized jitter
     final jitterMs = _random.nextInt(500);

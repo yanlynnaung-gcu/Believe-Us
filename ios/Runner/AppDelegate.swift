@@ -13,7 +13,7 @@ import GoogleMaps
     GMSServices.provideAPIKey("YOUR_GOOGLE_MAPS_API_KEY")
 
     if let controller = window?.rootViewController as? FlutterViewController {
-      let volumeChannel = FlutterEventChannel(name: "com.example.thae_nge_lay/volume_button", binaryMessenger: controller.binaryMessenger)
+      let volumeChannel = FlutterEventChannel(name: "com.yal.thae_nge_lay/volume_button", binaryMessenger: controller.binaryMessenger)
       volumeChannel.setStreamHandler(self)
     }
 

@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 import 'package:thae_nge_lay/core/errors/failure.dart';
@@ -23,8 +25,8 @@ class ChatRepositoryImpl implements ChatRepository {
   StreamSubscription? _wsSub;
 
   ChatRepositoryImpl({Dio? dio, WebSocketSyncService? ws})
-      : _dio = dio ?? Dio(),
-        _ws = ws ?? WebSocketSyncService() {
+    : _dio = dio ?? Dio(),
+      _ws = ws ?? WebSocketSyncService() {
     _initWsListener();
   }
 
@@ -55,14 +57,20 @@ class ChatRepositoryImpl implements ChatRepository {
 
   @override
   Future<Either<Failure, List<ChatMessage>>> getMessages(
-      String coupleSpaceId) async {
+    String coupleSpaceId,
+  ) async {
     try {
       // 1. Fetch remote messages from Spring Boot backend
       try {
-        final response = await _dio.get('${ApiEndpoints.chatMessagesPath}/$coupleSpaceId');
+        final response = await _dio.get(
+          '${ApiEndpoints.chatMessagesPath}/$coupleSpaceId',
+        );
         if (response.statusCode == 200 && response.data is List) {
           final remoteList = (response.data as List)
-              .map((j) => ChatMessage.fromJson(Map<String, dynamic>.from(j as Map)))
+              .map(
+                (j) =>
+                    ChatMessage.fromJson(Map<String, dynamic>.from(j as Map)),
+              )
               .toList();
 
           final local = _getList(coupleSpaceId);
@@ -132,10 +140,7 @@ class ChatRepositoryImpl implements ChatRepository {
 
       // Async push to Spring Boot backend
       try {
-        await _dio.post(
-          ApiEndpoints.chatMessagesPath,
-          data: msg.toJson(),
-        );
+        await _dio.post(ApiEndpoints.chatMessagesPath, data: msg.toJson());
       } catch (dioErr) {
         debugPrint('[Chat Send Backend Warning] $dioErr');
       }
@@ -156,13 +161,56 @@ class ChatRepositoryImpl implements ChatRepository {
     required List<double> waveforms,
   }) async {
     try {
+      String resolvedRemotePath = audioPath;
+
+      // 1. Upload local audio file via multipart form-data to Spring Boot backend
+      final localFile = File(
+        audioPath.startsWith('file://')
+            ? audioPath.replaceFirst('file://', '')
+            : audioPath,
+      );
+
+      if (localFile.existsSync()) {
+        try {
+          final fileName = localFile.path.split(Platform.pathSeparator).last;
+          final formData = FormData.fromMap({
+            'file': await MultipartFile.fromFile(
+              localFile.path,
+              filename: fileName,
+              contentType: MediaType('audio', 'm4a'),
+            ),
+            'coupleSpaceId': coupleSpaceId,
+          });
+
+          final uploadResp = await _dio.post(
+            ApiEndpoints.chatVoiceUploadPath,
+            data: formData,
+          );
+
+          if (uploadResp.statusCode == 200 && uploadResp.data is Map) {
+            final data = uploadResp.data as Map;
+            final uploadedUrl = data['audioUrl'] ?? data['audioPath'];
+            if (uploadedUrl != null && uploadedUrl.toString().isNotEmpty) {
+              resolvedRemotePath = uploadedUrl.toString();
+              debugPrint(
+                '[Chat Voice Upload] Audio uploaded to backend: $resolvedRemotePath',
+              );
+            }
+          }
+        } catch (uploadErr) {
+          debugPrint(
+            '[Chat Voice Upload Warning] Multipart upload failed: $uploadErr',
+          );
+        }
+      }
+
       final msg = ChatMessage(
         id: 'msg_${_uuid.v4().substring(0, 8)}',
         senderId: senderId,
         receiverId: receiverId,
         coupleSpaceId: coupleSpaceId,
         type: MessageType.voice,
-        audioPath: audioPath,
+        audioPath: resolvedRemotePath,
         audioDurationSeconds: durationSeconds,
         waveformSamples: waveforms,
         createdAt: DateTime.now(),
@@ -171,10 +219,7 @@ class ChatRepositoryImpl implements ChatRepository {
       _addAndNotify(msg);
 
       try {
-        await _dio.post(
-          ApiEndpoints.chatMessagesPath,
-          data: msg.toJson(),
-        );
+        await _dio.post(ApiEndpoints.chatMessagesPath, data: msg.toJson());
       } catch (dioErr) {
         debugPrint('[Chat Voice Send Backend Warning] $dioErr');
       }
@@ -206,10 +251,7 @@ class ChatRepositoryImpl implements ChatRepository {
       _addAndNotify(msg);
 
       try {
-        await _dio.post(
-          ApiEndpoints.chatMessagesPath,
-          data: msg.toJson(),
-        );
+        await _dio.post(ApiEndpoints.chatMessagesPath, data: msg.toJson());
       } catch (dioErr) {
         debugPrint('[Chat Gift Send Backend Warning] $dioErr');
       }
@@ -236,9 +278,9 @@ class ChatRepositoryImpl implements ChatRepository {
       }
     } catch (_) {}
 
-    final localCount = _getList(coupleSpaceId)
-        .where((m) => m.receiverId == receiverId && !m.isRead)
-        .length;
+    final localCount = _getList(
+      coupleSpaceId,
+    ).where((m) => m.receiverId == receiverId && !m.isRead).length;
     return Right(localCount);
   }
 
