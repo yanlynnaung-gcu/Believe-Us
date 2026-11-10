@@ -112,9 +112,10 @@ spring:
           fetch_size: 50
   data:
     redis:
-      host: ${SPRING_DATA_REDIS_HOST:localhost}
-      port: ${SPRING_DATA_REDIS_PORT:6379}
-      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      host: ${SPRING_DATA_REDIS_HOST:${REDISHOST:localhost}}
+      port: ${SPRING_DATA_REDIS_PORT:${REDISPORT:6379}}
+      password: ${SPRING_DATA_REDIS_PASSWORD:${REDISPASSWORD:${REDIS_PASSWORD:}}}
+      timeout: 3000ms
 believeus:
   redis:
     pubsub:
