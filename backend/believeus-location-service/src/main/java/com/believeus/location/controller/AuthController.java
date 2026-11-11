@@ -19,37 +19,37 @@ public class AuthController {
     private final AuthService authService;
     private final JwtTokenService jwtTokenService;
 
-    @PostMapping("/email/send-otp")
+    @PostMapping({"/email/send-otp", "/email/send-otp/"})
     public ResponseEntity<Map<String, Object>> sendEmailOtp(@Valid @RequestBody SendEmailOtpRequest request) {
         return ResponseEntity.ok(authService.sendEmailOtp(request));
     }
 
-    @PostMapping("/forgot-password/send-otp")
+    @PostMapping({"/forgot-password/send-otp", "/forgot-password/send-otp/"})
     public ResponseEntity<Map<String, Object>> sendForgotPasswordOtp(@Valid @RequestBody SendEmailOtpRequest request) {
         return ResponseEntity.ok(authService.sendForgotPasswordOtp(request));
     }
 
-    @PostMapping("/reset-password")
+    @PostMapping({"/reset-password", "/reset-password/"})
     public ResponseEntity<Map<String, Object>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         return ResponseEntity.ok(authService.resetPassword(request));
     }
 
-    @PostMapping("/email/verify-otp")
+    @PostMapping({"/email/verify-otp", "/email/verify-otp/"})
     public ResponseEntity<AuthResponse> verifyEmailOtp(@Valid @RequestBody VerifyEmailOtpRequest request) {
         return ResponseEntity.ok(authService.verifyEmailOtp(request));
     }
 
-    @PostMapping("/register")
+    @PostMapping({"/register", "/register/"})
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.ok(authService.register(request));
     }
 
-    @PostMapping("/login")
+    @PostMapping({"/login", "/login/"})
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    @PostMapping("/google")
+    @PostMapping({"/google", "/google/"})
     public ResponseEntity<AuthResponse> googleAuth(@Valid @RequestBody GoogleAuthRequest request) {
         return ResponseEntity.ok(authService.googleAuth(request));
     }
