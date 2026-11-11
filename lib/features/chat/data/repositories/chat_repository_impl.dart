@@ -43,9 +43,17 @@ class ChatRepositoryImpl implements ChatRepository {
         final msg = ChatMessage.fromJson(Map<String, dynamic>.from(raw));
         _store.addMessage(msg);
       } catch (e) {
-        debugPrint('[Chat WS Parse Error] $e');
+        if (kDebugMode &&
+            const bool.fromEnvironment('VERBOSE_WS_LOGS', defaultValue: false)) {
+          debugPrint('[Chat WS Parse Error] $e');
+        }
       }
     });
+  }
+
+  void dispose() {
+    _wsSub?.cancel();
+    _wsSub = null;
   }
 
   @override
@@ -231,8 +239,10 @@ class ChatRepositoryImpl implements ChatRepository {
 
 @Riverpod(keepAlive: true)
 ChatRepository chatRepository(Ref ref) {
-  return ChatRepositoryImpl(
+  final repo = ChatRepositoryImpl(
     dio: ref.watch(dioClientProvider),
     ws: ref.watch(webSocketSyncServiceProvider),
   );
+  ref.onDispose(() => repo.dispose());
+  return repo;
 }

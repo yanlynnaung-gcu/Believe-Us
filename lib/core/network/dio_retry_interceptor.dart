@@ -93,10 +93,12 @@ class DioExponentialBackoffRetryInterceptor extends Interceptor {
             .toInt() +
         jitterMs;
 
-    debugPrint(
-      '[DioRetry] Transient error on ${err.requestOptions.path} (${err.type}). '
-      'Retrying ($nextRetry/$maxRetries) in ${delayMs}ms...',
-    );
+    if (const bool.fromEnvironment('VERBOSE_DIO_LOGS', defaultValue: false)) {
+      debugPrint(
+        '[DioRetry] Transient error on ${err.requestOptions.path} (${err.type}). '
+        'Retrying ($nextRetry/$maxRetries) in ${delayMs}ms...',
+      );
+    }
 
     await Future.delayed(Duration(milliseconds: delayMs));
 

@@ -55,6 +55,12 @@ public class UserEntity {
     @Builder.Default
     private Boolean isOnline = false;
 
+    @Column(length = 128)
+    private String currentDeviceId;
+
+    @Column(length = 128)
+    private String currentDeviceName;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 

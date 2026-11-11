@@ -20,9 +20,12 @@ class WebSocketReconnectTracker {
         .toInt() + jitterMs;
 
     attempts++;
-    debugPrint(
-      '[WebSocket Backoff] Reconnecting in ${delayMs}ms (Attempt #$attempts, max capped at ${maxRetryDelayMs}ms)...',
-    );
+    if (kDebugMode &&
+        const bool.fromEnvironment('VERBOSE_WS_LOGS', defaultValue: false)) {
+      debugPrint(
+        '[WebSocket Backoff] Reconnecting in ${delayMs}ms (Attempt #$attempts, max capped at ${maxRetryDelayMs}ms)...',
+      );
+    }
     return delayMs;
   }
 }

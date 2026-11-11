@@ -19,6 +19,9 @@ class PartnerLocationNotifier extends _$PartnerLocationNotifier {
 
   @override
   PartnerLocationStatus build() {
+    _pollingTimer?.cancel();
+    _wsSub?.cancel();
+
     ref.onDispose(() {
       _pollingTimer?.cancel();
       _wsSub?.cancel();

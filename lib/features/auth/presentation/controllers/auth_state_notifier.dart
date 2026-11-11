@@ -84,4 +84,6 @@ class AuthStateNotifier extends _$AuthStateNotifier {
   Future<void> signOut() async {
     await setUser(null);
   }
+
+  Future<void> logout() => signOut();
 }

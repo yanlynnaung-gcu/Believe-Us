@@ -110,6 +110,10 @@ class FakeLocalStorageService implements LocalStorageService {
   @override
   Future<void> setLocationPermissionGranted(bool value) async {}
   @override
+  String getDeviceId() => 'dev_fake_badge_001';
+  @override
+  String getDeviceName() => 'Fake Badge Device';
+  @override
   Future<void> clearAll() async {}
   @override
   Future<void> init() async {}

@@ -67,6 +67,7 @@ class PairingController extends _$PairingController {
     ws.updateCredentials(userId: user.id, coupleSpaceId: null);
 
     // 1. Instant WebSocket event when partner submits our code
+    _wsSub?.cancel();
     _wsSub = ws.onEvent('COUPLE_PAIRED').listen((e) async {
       final data = e.data;
       final user1 = data['user1Id']?.toString();

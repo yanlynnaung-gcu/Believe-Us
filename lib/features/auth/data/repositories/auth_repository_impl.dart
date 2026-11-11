@@ -99,11 +99,15 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, UserProfile>> login({
     required String email,
     required String password,
+    String? deviceId,
+    String? deviceName,
   }) async {
     try {
       final user = await _remoteDataSource.login(
         email: email,
         password: password,
+        deviceId: deviceId,
+        deviceName: deviceName,
       );
       return Right(user);
     } on DioException catch (e) {

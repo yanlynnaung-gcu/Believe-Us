@@ -82,6 +82,9 @@ class _PartnerMapScreenState extends ConsumerState<PartnerMapScreen>
   }
 
   Future<void> _initLocations() async {
+    _userLocationSub?.cancel();
+    _wsLocationSub?.cancel();
+
     final locationSvc = ref.read(locationServiceProvider);
     final partner = ref.read(partnerLocationProvider);
     final media = ref.read(coupleMediaProvider);

@@ -82,6 +82,8 @@ class MockAuthRepository implements AuthRepository {
   Future<Either<Failure, UserProfile>> login({
     required String email,
     required String password,
+    String? deviceId,
+    String? deviceName,
   }) async {
     final user = UserProfile(
       id: 'usr_real_login',
@@ -248,6 +250,10 @@ class MockLocalStorageService implements LocalStorageService {
   bool get isLocationPermissionGranted => true;
   @override
   Future<void> setLocationPermissionGranted(bool value) async {}
+  @override
+  String getDeviceId() => 'dev_mock_test_001';
+  @override
+  String getDeviceName() => 'Mock Test Device';
   @override
   Future<void> clearAll() async {}
   @override

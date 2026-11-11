@@ -49,6 +49,9 @@ backend/**/target/
 backend/**/.mvn/
 backend/**/*.log
 backend/**/data/
+*.mv.db
+*.trace.db
+backend/**/data/
 backend/**/uploads/
 backend/**/.moquette*
 data/

@@ -211,6 +211,19 @@ public class SyncWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
+     * Checks if a user currently has an active, open WebSocket session.
+     */
+    public boolean isUserOnline(String userId) {
+        if (userId == null) return false;
+        String sid = userSessionMap.get(userId);
+        if (sid != null) {
+            WebSocketSession session = activeSessions.get(sid);
+            return session != null && session.isOpen();
+        }
+        return false;
+    }
+
+    /**
      * Directly sends an event to a specific user (e.g. partner)
      */
     public void sendToUser(String userId, String eventType, Object payload) {

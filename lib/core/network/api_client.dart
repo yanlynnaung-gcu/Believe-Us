@@ -37,17 +37,19 @@ Dio dioClient(Ref ref) {
       'VERBOSE_DIO_LOGS',
       defaultValue: false,
     );
-    dio.interceptors.add(
-      LogInterceptor(
-        request: verboseDioLogs,
-        requestHeader: verboseDioLogs,
-        requestBody: verboseDioLogs,
-        responseHeader: verboseDioLogs,
-        responseBody: verboseDioLogs,
-        error: true,
-        logPrint: (obj) => debugPrint('[Dio] $obj'),
-      ),
-    );
+    if (verboseDioLogs) {
+      dio.interceptors.add(
+        LogInterceptor(
+          request: true,
+          requestHeader: true,
+          requestBody: true,
+          responseHeader: true,
+          responseBody: true,
+          error: true,
+          logPrint: (obj) => debugPrint('[Dio] $obj'),
+        ),
+      );
+    }
   }
 
   return dio;

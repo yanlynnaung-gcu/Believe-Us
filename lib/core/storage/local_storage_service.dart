@@ -1,5 +1,7 @@
+import 'dart:io' show Platform;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:uuid/uuid.dart';
 
 part 'local_storage_service.g.dart';
 
@@ -10,6 +12,8 @@ class LocalStorageService {
   static const String _keyAuthToken = 'auth_jwt_token';
   static const String _keyUserProfileJson = 'user_profile_json';
   static const String _keyLocationPermissionGranted = 'location_permission_granted';
+  static const String _keyDeviceId = 'unique_device_id';
+  static const String _keyDeviceName = 'device_display_name';
 
   late Box _box;
 
@@ -60,6 +64,35 @@ class LocalStorageService {
 
   Future<void> setLocationPermissionGranted(bool value) async {
     await _box.put(_keyLocationPermissionGranted, value);
+  }
+
+  String getDeviceId() {
+    final existing = _box.get(_keyDeviceId) as String?;
+    if (existing != null && existing.isNotEmpty) {
+      return existing;
+    }
+    final newId = 'dev_${const Uuid().v4().replaceAll('-', '').substring(0, 16)}';
+    _box.put(_keyDeviceId, newId);
+    return newId;
+  }
+
+  String getDeviceName() {
+    final existing = _box.get(_keyDeviceName) as String?;
+    if (existing != null && existing.isNotEmpty) {
+      return existing;
+    }
+    String name = 'Mobile Device';
+    try {
+      if (Platform.isAndroid) {
+        name = 'Android Device';
+      } else if (Platform.isIOS) {
+        name = 'iPhone / iOS Device';
+      } else if (Platform.isMacOS) {
+        name = 'Mac';
+      }
+    } catch (_) {}
+    _box.put(_keyDeviceName, name);
+    return name;
   }
 
   Future<void> clearAll() async {

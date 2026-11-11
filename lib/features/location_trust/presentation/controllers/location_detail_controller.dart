@@ -36,6 +36,9 @@ class LocationDetailController extends _$LocationDetailController {
 
   @override
   LocationDetailState build() {
+    _locSub?.cancel();
+    _nudgeSub?.cancel();
+
     ref.onDispose(() {
       _locSub?.cancel();
       _nudgeSub?.cancel();

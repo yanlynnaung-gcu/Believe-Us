@@ -53,6 +53,17 @@ public class GlobalExceptionHandler {
         ));
     }
 
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMethodNotSupported(org.springframework.web.HttpRequestMethodNotSupportedException ex) {
+        log.warn("[Method Not Allowed - 405] Method: {}, Supported: {}", ex.getMethod(), ex.getSupportedHttpMethods());
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(Map.of(
+                "status", 405,
+                "error", "Method Not Allowed",
+                "message", ex.getMessage(),
+                "timestamp", Instant.now().toString()
+        ));
+    }
+
     @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNoResourceFound(org.springframework.web.servlet.resource.NoResourceFoundException ex) {
         log.warn("[Not Found - 404] Resource not found: {}", ex.getResourcePath());

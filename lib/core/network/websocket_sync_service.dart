@@ -12,6 +12,9 @@ export 'websocket_event.dart';
 part 'websocket_sync_service.g.dart';
 
 class WebSocketSyncService {
+  static const bool _kVerboseWsLogs =
+      bool.fromEnvironment('VERBOSE_WS_LOGS', defaultValue: false);
+
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
   Timer? _reconnectTimer;
@@ -65,11 +68,13 @@ class WebSocketSyncService {
           'data': data,
         });
         _channel!.sink.add(payload);
-        if (kDebugMode && !_highFrequencyEvents.contains(event.toUpperCase())) {
+        if (kDebugMode && _kVerboseWsLogs && !_highFrequencyEvents.contains(event.toUpperCase())) {
           debugPrint('[WebSocket] Sent event $event: $payload');
         }
       } catch (e) {
-        debugPrint('[WebSocket] Send event error: $e');
+        if (kDebugMode && _kVerboseWsLogs) {
+          debugPrint('[WebSocket] Send event error: $e');
+        }
       }
     }
   }
@@ -94,18 +99,24 @@ class WebSocketSyncService {
 
     try {
       final uri = Uri.parse(ApiEndpoints.wsUrl);
-      debugPrint('[WebSocket] Connecting to $uri (Attempt ${_tracker.attempts}) ...');
+      if (kDebugMode && _kVerboseWsLogs) {
+        debugPrint('[WebSocket] Connecting to $uri (Attempt ${_tracker.attempts}) ...');
+      }
 
       _channel = WebSocketChannel.connect(uri);
 
       _channel?.ready.then((_) {
         _isConnecting = false;
         _tracker.reset();
-        debugPrint('[WebSocket] Handshake succeeded.');
+        if (kDebugMode && _kVerboseWsLogs) {
+          debugPrint('[WebSocket] Handshake succeeded.');
+        }
         _subscribe();
         _startPing();
       }).catchError((error) {
-        debugPrint('[WebSocket] Handshake Error: $error');
+        if (kDebugMode && _kVerboseWsLogs) {
+          debugPrint('[WebSocket] Handshake Error: $error');
+        }
         _scheduleExponentialReconnect();
       });
 
@@ -116,17 +127,23 @@ class WebSocketSyncService {
           _handleMessage(data);
         },
         onError: (error) {
-          debugPrint('[WebSocket] Connection Error: $error');
+          if (kDebugMode && _kVerboseWsLogs) {
+            debugPrint('[WebSocket] Connection Error: $error');
+          }
           _scheduleExponentialReconnect();
         },
         onDone: () {
-          debugPrint('[WebSocket] Connection closed by server.');
+          if (kDebugMode && _kVerboseWsLogs) {
+            debugPrint('[WebSocket] Connection closed by server.');
+          }
           _scheduleExponentialReconnect();
         },
         cancelOnError: true,
       );
     } catch (e) {
-      debugPrint('[WebSocket] Connect exception: $e');
+      if (kDebugMode && _kVerboseWsLogs) {
+        debugPrint('[WebSocket] Connect exception: $e');
+      }
       _scheduleExponentialReconnect();
     }
   }
@@ -142,12 +159,16 @@ class WebSocketSyncService {
         'topics': topics,
       });
       _channel!.sink.add(payload);
-      debugPrint(
-        '[WebSocket] Subscribed User $_currentUserId to Space $_currentCoupleSpaceId '
-        '(${topics.length} topics)',
-      );
+      if (kDebugMode && _kVerboseWsLogs) {
+        debugPrint(
+          '[WebSocket] Subscribed User $_currentUserId to Space $_currentCoupleSpaceId '
+          '(${topics.length} topics)',
+        );
+      }
     } catch (e) {
-      debugPrint('[WebSocket] Subscribe error: $e');
+      if (kDebugMode && _kVerboseWsLogs) {
+        debugPrint('[WebSocket] Subscribe error: $e');
+      }
     }
   }
 
@@ -169,7 +190,7 @@ class WebSocketSyncService {
       final topic = json['topic'] as String?;
       final spaceId = json['coupleSpaceId'] as String?;
 
-      if (kDebugMode && !_highFrequencyEvents.contains(event.toUpperCase())) {
+      if (kDebugMode && _kVerboseWsLogs && !_highFrequencyEvents.contains(event.toUpperCase())) {
         debugPrint('[WebSocket Event Received] $event: $json');
       }
 
@@ -186,7 +207,9 @@ class WebSocketSyncService {
         ),
       );
     } catch (e) {
-      debugPrint('[WebSocket] Parse error: $e');
+      if (kDebugMode && _kVerboseWsLogs) {
+        debugPrint('[WebSocket] Parse error: $e');
+      }
     }
   }
 

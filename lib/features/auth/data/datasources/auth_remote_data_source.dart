@@ -31,6 +31,8 @@ abstract interface class AuthRemoteDataSource {
   Future<UserProfile> login({
     required String email,
     required String password,
+    String? deviceId,
+    String? deviceName,
   });
 
   Future<UserProfile> signInWithGoogle({

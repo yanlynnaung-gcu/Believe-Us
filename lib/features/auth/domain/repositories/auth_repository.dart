@@ -31,6 +31,8 @@ abstract interface class AuthRepository {
   Future<Either<Failure, UserProfile>> login({
     required String email,
     required String password,
+    String? deviceId,
+    String? deviceName,
   });
 
   Future<Either<Failure, UserProfile>> signInWithGoogle({

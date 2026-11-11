@@ -19,6 +19,7 @@ class MqttSosService {
 
   final StreamController<EmergencySOSAlert> _sosAlertController =
       StreamController<EmergencySOSAlert>.broadcast();
+  StreamSubscription? _updatesSub;
 
   final List<EmergencySOSAlert> _offlineDispatchQueue = [];
   final List<EmergencySOSAlert> _publishedAlertsForTesting = [];
@@ -135,6 +136,8 @@ class MqttSosService {
   }
 
   void _cleanupClient() {
+    _updatesSub?.cancel();
+    _updatesSub = null;
     if (_client != null) {
       try {
         _client!.disconnect();
@@ -144,7 +147,10 @@ class MqttSosService {
   }
 
   void _onConnected() {
-    debugPrint('[MqttSosService] Connected to MQTT broker successfully.');
+    if (kDebugMode &&
+        const bool.fromEnvironment('VERBOSE_WS_LOGS', defaultValue: false)) {
+      debugPrint('[MqttSosService] Connected to MQTT broker successfully.');
+    }
     _subscribeToEmergencyTopic();
     _flushOfflineQueue();
   }
@@ -155,12 +161,16 @@ class MqttSosService {
     try {
       _client!.subscribe(topic, MqttQos.atLeastOnce);
     } catch (e) {
-      debugPrint('[MqttSosService] Subscribe error: $e');
+      if (kDebugMode &&
+          const bool.fromEnvironment('VERBOSE_WS_LOGS', defaultValue: false)) {
+        debugPrint('[MqttSosService] Subscribe error: $e');
+      }
     }
   }
 
   void _listenToIncomingUpdates() {
-    _client?.updates?.listen(
+    _updatesSub?.cancel();
+    _updatesSub = _client?.updates?.listen(
       (messages) {
         if (messages.isNotEmpty) {
           MqttSosMessageParser.processUpdates(
@@ -170,7 +180,12 @@ class MqttSosService {
           );
         }
       },
-      onError: (err) => debugPrint('[MqttSosService] Updates error: $err'),
+      onError: (err) {
+        if (kDebugMode &&
+            const bool.fromEnvironment('VERBOSE_WS_LOGS', defaultValue: false)) {
+          debugPrint('[MqttSosService] Updates error: $err');
+        }
+      },
     );
   }
 

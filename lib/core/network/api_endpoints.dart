@@ -72,6 +72,8 @@ class ApiEndpoints {
   static const String authResetPasswordPath = '/api/v1/auth/reset-password';
   static const String authRegisterPath = '/api/v1/auth/register';
   static const String authLoginPath = '/api/v1/auth/login';
+  static String authLoginTicketPath(String ticketId) => '/api/v1/auth/login-ticket/$ticketId';
+  static String authLoginTicketResolvePath(String ticketId) => '/api/v1/auth/login-ticket/$ticketId/resolve';
   static const String authGooglePath = '/api/v1/auth/google';
   static const String usersPath = '/api/v1/users';
   static const String couplesPath = '/api/v1/couples';

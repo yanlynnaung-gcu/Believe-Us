@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thae_nge_lay/core/router/app_router.dart';
 import 'package:thae_nge_lay/core/storage/local_storage_service.dart';
 import 'package:thae_nge_lay/core/theme/app_theme.dart';
+import 'package:thae_nge_lay/features/auth/presentation/listeners/single_device_security_listener.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +33,7 @@ class ThaeThaeApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(singleDeviceSecurityListenerProvider);
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(

@@ -70,6 +70,11 @@ class CoupleMediaController extends _$CoupleMediaController {
         ? 'Ko Ko'
         : 'Thae Thae';
 
+    ref.onDispose(() {
+      _wsProfileSub?.cancel();
+      _wsCoverSub?.cancel();
+    });
+
     _setupWebSocketListeners();
     Future.microtask(() => syncCoupleSummary());
 

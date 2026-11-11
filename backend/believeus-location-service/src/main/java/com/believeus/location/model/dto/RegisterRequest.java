@@ -29,4 +29,8 @@ public class RegisterRequest {
     private LocalDate birthday;
 
     private String avatarUrl;
+
+    private String deviceId;
+
+    private String deviceName;
 }

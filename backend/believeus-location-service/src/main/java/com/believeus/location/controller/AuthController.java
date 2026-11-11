@@ -49,6 +49,23 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
+    @GetMapping({"/login-ticket/{ticketId}", "/login-ticket/{ticketId}/"})
+    public ResponseEntity<LoginTicketStatusResponse> getLoginTicketStatus(@PathVariable String ticketId) {
+        return ResponseEntity.ok(authService.getLoginTicketStatus(ticketId));
+    }
+
+    @PostMapping({"/login-ticket/{ticketId}/resolve", "/login-ticket/{ticketId}/resolve/"})
+    public ResponseEntity<Map<String, Object>> resolveLoginTicket(
+            @PathVariable String ticketId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @Valid @RequestBody ResolveLoginTicketRequest request) {
+        String userId = jwtTokenService.extractUserId(authHeader);
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(authService.resolveLoginTicket(ticketId, userId, request.getApproved()));
+    }
+
     @PostMapping({"/google", "/google/"})
     public ResponseEntity<AuthResponse> googleAuth(@Valid @RequestBody GoogleAuthRequest request) {
         return ResponseEntity.ok(authService.googleAuth(request));

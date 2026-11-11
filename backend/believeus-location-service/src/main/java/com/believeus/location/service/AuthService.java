@@ -2,6 +2,7 @@ package com.believeus.location.service;
 
 import com.believeus.location.entity.EmailOtpEntity;
 import com.believeus.location.entity.UserEntity;
+import com.believeus.location.model.LoginTicket;
 import com.believeus.location.model.dto.*;
 import com.believeus.location.repository.EmailOtpRepository;
 import com.believeus.location.repository.UserRepository;
@@ -28,6 +29,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
     private final SyncWebSocketHandler syncWebSocketHandler;
+    private final LoginTicketService loginTicketService;
 
     @Transactional
     public Map<String, Object> sendEmailOtp(SendEmailOtpRequest request) {
@@ -166,6 +168,8 @@ public class AuthService {
                 .avatarUrl(request.getAvatarUrl())
                 .batteryLevel(100)
                 .isOnline(true)
+                .currentDeviceId(request.getDeviceId())
+                .currentDeviceName(request.getDeviceName() != null ? request.getDeviceName() : "Mobile App")
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
@@ -192,6 +196,44 @@ public class AuthService {
             throw new IllegalArgumentException("Incorrect password. Please try again.");
         }
 
+        // Strict Single-Device Session Security:
+        // If an active session exists on another device, intercept and require primary device approval.
+        boolean isOnline = syncWebSocketHandler.isUserOnline(user.getId());
+        boolean isDifferentDevice = user.getCurrentDeviceId() != null
+                && !user.getCurrentDeviceId().isBlank()
+                && request.getDeviceId() != null
+                && !request.getDeviceId().isBlank()
+                && !user.getCurrentDeviceId().equals(request.getDeviceId());
+
+        if (isOnline && isDifferentDevice) {
+            LoginTicket ticket = loginTicketService.createTicket(
+                    user.getId(),
+                    request.getDeviceId(),
+                    request.getDeviceName()
+            );
+
+            // Broadcast real-time WebSocket alert event to active primary device
+            syncWebSocketHandler.sendToUser(user.getId(), "DEVICE_LOGIN_ATTEMPT", Map.of(
+                    "ticketId", ticket.getTicketId(),
+                    "deviceId", request.getDeviceId(),
+                    "deviceName", ticket.getTargetDeviceName(),
+                    "attemptedAt", System.currentTimeMillis()
+            ));
+
+            log.info("[Single-Device Security] Intercepted login attempt for user '{}' from device '{}' ({}). Approval requested from primary device '{}'.",
+                    user.getId(), request.getDeviceId(), ticket.getTargetDeviceName(), user.getCurrentDeviceId());
+
+            return AuthResponse.builder()
+                    .requiresApproval(true)
+                    .loginTicketId(ticket.getTicketId())
+                    .message("Login attempt detected from a new device. Approval requested from your active primary device.")
+                    .build();
+        }
+
+        if (request.getDeviceId() != null && !request.getDeviceId().isBlank()) {
+            user.setCurrentDeviceId(request.getDeviceId());
+            user.setCurrentDeviceName(request.getDeviceName() != null ? request.getDeviceName() : "Mobile App");
+        }
         user.setIsOnline(true);
         userRepository.save(user);
 
@@ -201,8 +243,76 @@ public class AuthService {
         return AuthResponse.builder()
                 .token(token)
                 .user(UserProfileDto.fromEntity(user))
+                .requiresApproval(false)
                 .message("Welcome back, " + user.getDisplayName() + "!")
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public LoginTicketStatusResponse getLoginTicketStatus(String ticketId) {
+        LoginTicket ticket = loginTicketService.getTicket(ticketId);
+        if (ticket == null) {
+            throw new IllegalArgumentException("Login ticket not found or expired: " + ticketId);
+        }
+
+        return LoginTicketStatusResponse.builder()
+                .ticketId(ticket.getTicketId())
+                .status(ticket.getStatus().name())
+                .requiresApproval(ticket.getStatus() == LoginTicket.TicketStatus.PENDING)
+                .token(ticket.getToken())
+                .user(ticket.getUserProfile())
+                .message(ticket.getStatus() == LoginTicket.TicketStatus.APPROVED
+                        ? "Login approved!"
+                        : ticket.getStatus() == LoginTicket.TicketStatus.REJECTED
+                        ? "Login request was denied by your active device."
+                        : ticket.getStatus() == LoginTicket.TicketStatus.EXPIRED
+                        ? "Login request timed out."
+                        : "Awaiting approval from your active device.")
+                .build();
+    }
+
+    @Transactional
+    public Map<String, Object> resolveLoginTicket(String ticketId, String currentUserId, boolean approved) {
+        LoginTicket ticket = loginTicketService.getTicket(ticketId);
+        if (ticket == null) {
+            throw new IllegalArgumentException("Login ticket not found or expired: " + ticketId);
+        }
+        if (!ticket.getUserId().equals(currentUserId)) {
+            throw new IllegalArgumentException("Unauthorized to resolve this login ticket.");
+        }
+        if (ticket.getStatus() != LoginTicket.TicketStatus.PENDING) {
+            throw new IllegalStateException("Ticket already resolved with status: " + ticket.getStatus());
+        }
+
+        if (approved) {
+            UserEntity user = userRepository.findById(currentUserId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found: " + currentUserId));
+
+            user.setCurrentDeviceId(ticket.getTargetDeviceId());
+            user.setCurrentDeviceName(ticket.getTargetDeviceName());
+            userRepository.save(user);
+
+            String token = jwtTokenService.generateToken(user.getId(), user.getEmail(), user.getRole(), user.getCoupleSpaceId());
+            UserProfileDto profile = UserProfileDto.fromEntity(user);
+
+            loginTicketService.resolveTicket(ticketId, true, token, profile);
+
+            // Notify active primary device that this session is terminated due to takeover
+            syncWebSocketHandler.sendToUser(currentUserId, "SESSION_TERMINATED", Map.of(
+                    "reason", "LOGIN_ON_ANOTHER_DEVICE",
+                    "deviceName", ticket.getTargetDeviceName(),
+                    "message", "Your account was logged in from " + ticket.getTargetDeviceName() + "."
+            ));
+
+            log.info("[Single-Device Security] Login ticket '{}' APPROVED for user '{}' on new device '{}'.",
+                    ticketId, currentUserId, ticket.getTargetDeviceName());
+
+            return Map.of("success", true, "status", "APPROVED", "message", "New device login approved.");
+        } else {
+            loginTicketService.resolveTicket(ticketId, false, null, null);
+            log.info("[Single-Device Security] Login ticket '{}' REJECTED for user '{}'.", ticketId, currentUserId);
+            return Map.of("success", true, "status", "REJECTED", "message", "New device login rejected.");
+        }
     }
 
     @Transactional
