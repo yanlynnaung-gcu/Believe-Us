@@ -40,6 +40,54 @@ public class AuthService {
     }
 
     @Transactional
+    public Map<String, Object> sendForgotPasswordOtp(SendEmailOtpRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+        if (!userRepository.existsByEmailIgnoreCase(email)) {
+            throw new IllegalArgumentException("No account found with this email: " + email + ". Please check your email or sign up.");
+        }
+        emailService.generateAndSendOtp(email);
+        return Map.of(
+                "message", "A 6-digit verification code has been sent to " + email,
+                "expiresInSeconds", 300
+        );
+    }
+
+    @Transactional
+    public Map<String, Object> resetPassword(ResetPasswordRequest request) {
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+        String code = request.getOtp().trim();
+
+        UserEntity user = userRepository.findByEmailIgnoreCase(normalizedEmail)
+                .orElseThrow(() -> new IllegalArgumentException("No account found with this email: " + normalizedEmail));
+
+        EmailOtpEntity otp = emailOtpRepository
+                .findTopByEmailIgnoreCaseAndVerifiedFalseOrderByCreatedAtDesc(normalizedEmail)
+                .orElseThrow(() -> new IllegalArgumentException("No active verification code found for " + normalizedEmail + ". Please request a new code."));
+
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Verification code has expired. Please request a new code.");
+        }
+
+        if (!otp.getOtpCode().equals(code)) {
+            throw new IllegalArgumentException("Invalid 6-digit verification code. Please check your email.");
+        }
+
+        otp.setVerified(true);
+        emailOtpRepository.save(otp);
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+
+        log.info("Password successfully reset for user: {} ({})", user.getDisplayName(), user.getEmail());
+
+        return Map.of(
+                "success", true,
+                "message", "Password reset successfully! Please sign in with your new password."
+        );
+    }
+
+    @Transactional
     public AuthResponse verifyEmailOtp(VerifyEmailOtpRequest request) {
         String normalizedEmail = request.getEmail().trim().toLowerCase();
         String code = request.getOtp().trim();

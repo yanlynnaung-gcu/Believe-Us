@@ -76,6 +76,8 @@ class ApiEndpoints {
   // Authentication & Users endpoints
   static const String authEmailSendOtpPath = '/api/v1/auth/email/send-otp';
   static const String authEmailVerifyOtpPath = '/api/v1/auth/email/verify-otp';
+  static const String authForgotPasswordSendOtpPath = '/api/v1/auth/forgot-password/send-otp';
+  static const String authResetPasswordPath = '/api/v1/auth/reset-password';
   static const String authRegisterPath = '/api/v1/auth/register';
   static const String authLoginPath = '/api/v1/auth/login';
   static const String authGooglePath = '/api/v1/auth/google';

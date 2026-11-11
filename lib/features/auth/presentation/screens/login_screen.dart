@@ -21,11 +21,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  // 0: Free Email OTP (Default), 1: Password Sign In, 2: Sign Up
+  // 0: Password Sign In (Default), 1: Sign Up
   int _activeTabIndex = 0;
-
-  // Free Email OTP Controller
-  final TextEditingController _otpEmailController = TextEditingController();
 
   // Sign In Controllers
   final TextEditingController _loginEmailController = TextEditingController();
@@ -43,7 +40,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   void dispose() {
-    _otpEmailController.dispose();
     _loginEmailController.dispose();
     _loginPasswordController.dispose();
     _regNameController.dispose();
@@ -103,27 +99,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() {
         _selectedBirthday = picked;
       });
-    }
-  }
-
-  void _onSendEmailOtp() async {
-    final email = _otpEmailController.text.trim().toLowerCase();
-    if (email.isEmpty || !email.contains('@')) {
-      _showError('Please enter a valid email address.');
-      return;
-    }
-
-    final success = await ref
-        .read(authControllerProvider.notifier)
-        .sendEmailOtp(email);
-
-    if (mounted) {
-      if (success) {
-        context.push(AppRoutes.otpVerify, extra: email);
-      } else {
-        final err = ref.read(authControllerProvider).errorMessage;
-        _showError(err ?? 'Failed to send OTP code. Please try again.');
-      }
     }
   }
 
@@ -257,7 +232,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               SizedBox(height: 22.h),
 
-              // 3-Way Segmented Tab Switcher
+              // 2-Way Segmented Tab Switcher (Sign In & Sign Up)
               Container(
                 padding: EdgeInsets.all(4.r),
                 decoration: BoxDecoration(
@@ -267,9 +242,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 child: Row(
                   children: [
-                    _buildTabItem(title: 'Email OTP 💌', index: 0),
-                    _buildTabItem(title: 'Sign In 💕', index: 1),
-                    _buildTabItem(title: 'Sign Up ✨', index: 2),
+                    _buildTabItem(title: 'Sign In 💕', index: 0),
+                    _buildTabItem(title: 'Sign Up ✨', index: 1),
                   ],
                 ),
               ),
@@ -277,8 +251,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
               // Dynamic Form Content
               if (_activeTabIndex == 0)
-                _buildEmailOtpForm(authState)
-              else if (_activeTabIndex == 1)
                 _buildSignInForm(authState)
               else
                 _buildSignUpForm(authState),
@@ -367,7 +339,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     SizedBox(width: 10.w),
                     Expanded(
                       child: Text(
-                        '100% Private & Free. Gmail SMTP Email OTP with BCrypt hashing. Only you and your connected partner share this space.',
+                        '100% Private & Free. BCrypt password hashing & secure couple authentication. Only you and your connected partner share this space.',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11.sp,
                           color: BelieveColors.burgundy,
@@ -417,126 +389,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildEmailOtpForm(AuthUIState authState) {
-    return GlassmorphicCard(
-      padding: EdgeInsets.all(22.r),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8.r),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: BelieveColors.primaryGradient,
-                ),
-                child: const Icon(LucideIcons.mail, color: Colors.white, size: 18),
-              ),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Free Email OTP Sign-In',
-                      style: GoogleFonts.playfairDisplay(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.w700,
-                        color: BelieveColors.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      'No passwords to remember • 100% Free',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12.sp,
-                        color: BelieveColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 18.h),
-
-          Text(
-            'Your Gmail / Email Address',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w600,
-              color: BelieveColors.textPrimary,
-            ),
-          ),
-          SizedBox(height: 6.h),
-          TextField(
-            controller: _otpEmailController,
-            keyboardType: TextInputType.emailAddress,
-            style: GoogleFonts.plusJakartaSans(fontSize: 14.sp),
-            decoration: InputDecoration(
-              prefixIcon: const Icon(LucideIcons.mail, size: 18),
-              hintText: 'e.g. koko@gmail.com',
-              contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-            ),
-          ),
-          SizedBox(height: 20.h),
-
-          GestureDetector(
-            onTap: authState.isLoading ? null : _onSendEmailOtp,
-            child: Container(
-              height: 52.h,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: BelieveColors.primaryGradient,
-                borderRadius: BorderRadius.circular(18.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: BelieveColors.primary.withValues(alpha: 0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: authState.isLoading
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            LucideIcons.send,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                          SizedBox(width: 8.w),
-                          Flexible(
-                            child: Text(
-                              'Send 6-Digit OTP Code 💌',
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 15.sp,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -617,7 +469,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
             ),
           ),
-          SizedBox(height: 22.h),
+          SizedBox(height: 8.h),
+
+          // Forgot Password Link
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () {
+                final currentEmail = _loginEmailController.text.trim();
+                context.push(AppRoutes.forgotPassword, extra: currentEmail);
+              },
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                'Forgot Password?',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w600,
+                  color: BelieveColors.primary,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: 18.h),
 
           // Sign In Button
           GestureDetector(

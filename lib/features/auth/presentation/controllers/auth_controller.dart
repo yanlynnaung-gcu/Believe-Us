@@ -86,6 +86,60 @@ class AuthController extends _$AuthController {
     );
   }
 
+  Future<bool> sendForgotPasswordOtp(String email) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    final repo = ref.read(authRepositoryProvider);
+    final result = await repo.sendForgotPasswordOtp(email);
+
+    return result.fold(
+      (failure) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: failure.message ?? 'Failed to send verification code.',
+        );
+        return false;
+      },
+      (data) {
+        state = state.copyWith(
+          isLoading: false,
+          successMessage: data['message'] as String? ?? 'Code sent to $email',
+        );
+        return true;
+      },
+    );
+  }
+
+  Future<bool> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    final repo = ref.read(authRepositoryProvider);
+    final result = await repo.resetPassword(
+      email: email,
+      otp: otp,
+      newPassword: newPassword,
+    );
+
+    return result.fold(
+      (failure) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: failure.message ?? 'Failed to reset password.',
+        );
+        return false;
+      },
+      (_) {
+        state = state.copyWith(
+          isLoading: false,
+          successMessage: 'Password reset successfully! Please sign in with your new password.',
+        );
+        return true;
+      },
+    );
+  }
+
   Future<bool> register({
     required String email,
     required String password,

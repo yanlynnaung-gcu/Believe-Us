@@ -5,6 +5,7 @@ import 'package:thae_nge_lay/core/router/route_names.dart';
 import 'package:thae_nge_lay/core/storage/local_storage_service.dart';
 import 'package:thae_nge_lay/features/anniversary/presentation/screens/anniversary_screen.dart';
 import 'package:thae_nge_lay/features/auth/presentation/controllers/auth_state_notifier.dart';
+import 'package:thae_nge_lay/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:thae_nge_lay/features/auth/presentation/screens/login_screen.dart';
 import 'package:thae_nge_lay/features/auth/presentation/screens/otp_verify_screen.dart';
 import 'package:thae_nge_lay/features/auth/presentation/screens/profile_setup_screen.dart';
@@ -57,7 +58,8 @@ GoRouter appRouter(Ref ref) {
 
       // 2. Authentication Guard
       final isAuthRoute = currentPath == AppRoutes.login ||
-          currentPath == AppRoutes.otpVerify;
+          currentPath == AppRoutes.otpVerify ||
+          currentPath == AppRoutes.forgotPassword;
 
       if (user == null) {
         if (!isAuthRoute) {
@@ -110,6 +112,13 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.login,
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        builder: (context, state) {
+          final email = state.extra as String? ?? (state.uri.queryParameters['email'] ?? '');
+          return ForgotPasswordScreen(initialEmail: email);
+        },
       ),
       GoRoute(
         path: AppRoutes.otpVerify,

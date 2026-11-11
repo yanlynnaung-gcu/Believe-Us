@@ -192,6 +192,67 @@ class AuthAndPairingIntegrationTest {
     }
 
     @Test
+    @DisplayName("Forgot Password & OTP Flow: Request OTP, reset password with OTP, and login with new password")
+    void testForgotPasswordAndResetFlow() {
+        String testEmail = "reset_user@believeus.app";
+
+        // Register initial user
+        authService.register(RegisterRequest.builder()
+                .email(testEmail)
+                .password("OriginalPassword123")
+                .displayName("Reset Tester")
+                .role("BOYFRIEND")
+                .build());
+
+        // 1. Sending OTP to non-existent email throws IllegalArgumentException
+        assertThrows(IllegalArgumentException.class, () -> {
+            authService.sendForgotPasswordOtp(SendEmailOtpRequest.builder().email("unknown@believeus.app").build());
+        });
+
+        // 2. Request OTP for existing user succeeds
+        var sendResp = authService.sendForgotPasswordOtp(SendEmailOtpRequest.builder().email(testEmail).build());
+        assertNotNull(sendResp);
+        assertTrue(sendResp.containsKey("message"));
+
+        // 3. Retrieve saved OTP
+        var otpEntity = emailOtpRepository.findTopByEmailIgnoreCaseAndVerifiedFalseOrderByCreatedAtDesc(testEmail)
+                .orElseThrow();
+
+        // 4. Reset with wrong OTP fails
+        assertThrows(IllegalArgumentException.class, () -> {
+            authService.resetPassword(ResetPasswordRequest.builder()
+                    .email(testEmail)
+                    .otp("111111")
+                    .newPassword("NewSuperSecret456")
+                    .build());
+        });
+
+        // 5. Reset with correct OTP succeeds
+        var resetResp = authService.resetPassword(ResetPasswordRequest.builder()
+                .email(testEmail)
+                .otp(otpEntity.getOtpCode())
+                .newPassword("NewSuperSecret456")
+                .build());
+        assertTrue((Boolean) resetResp.get("success"));
+
+        // 6. Old password no longer works
+        assertThrows(IllegalArgumentException.class, () -> {
+            authService.login(LoginRequest.builder()
+                    .email(testEmail)
+                    .password("OriginalPassword123")
+                    .build());
+        });
+
+        // 7. Login with new password succeeds
+        AuthResponse loginResp = authService.login(LoginRequest.builder()
+                .email(testEmail)
+                .password("NewSuperSecret456")
+                .build());
+        assertNotNull(loginResp.getToken());
+        assertEquals(testEmail, loginResp.getUser().getEmail());
+    }
+
+    @Test
     @DisplayName("Real-Time Chat Unread Badge: Sending text & voice messages updates unread count and mark-read resets it")
     void testChatUnreadTracking() {
         String spaceId = "space_chat_test";

@@ -13,6 +13,14 @@ abstract interface class AuthRemoteDataSource {
     required String otp,
   });
 
+  Future<Map<String, dynamic>> sendForgotPasswordOtp(String email);
+
+  Future<void> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  });
+
   Future<UserProfile> register({
     required String email,
     required String password,
@@ -118,6 +126,48 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       throw Exception(msg);
     } catch (e) {
       throw Exception('Verification failed: $e');
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> sendForgotPasswordOtp(String email) async {
+    try {
+      final response = await _dio.post(
+        ApiEndpoints.authForgotPasswordSendOtpPath,
+        data: {'email': email.trim().toLowerCase()},
+      );
+      if (response.data is Map) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+      return {'message': 'Verification code sent.'};
+    } on DioException catch (e) {
+      final msg = _extractErrorMessage(e);
+      throw Exception(msg);
+    } catch (e) {
+      throw Exception('Failed to send verification code: $e');
+    }
+  }
+
+  @override
+  Future<void> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      await _dio.post(
+        ApiEndpoints.authResetPasswordPath,
+        data: {
+          'email': email.trim().toLowerCase(),
+          'otp': otp.trim(),
+          'newPassword': newPassword,
+        },
+      );
+    } on DioException catch (e) {
+      final msg = _extractErrorMessage(e);
+      throw Exception(msg);
+    } catch (e) {
+      throw Exception('Failed to reset password: $e');
     }
   }
 

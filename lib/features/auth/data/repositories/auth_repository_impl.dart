@@ -41,6 +41,34 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, Map<String, dynamic>>> sendForgotPasswordOtp(String email) async {
+    try {
+      final res = await _remoteDataSource.sendForgotPasswordOtp(email);
+      return Right(res);
+    } catch (e) {
+      return Left(Failure.auth(e.toString().replaceAll('Exception: ', '')));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      await _remoteDataSource.resetPassword(
+        email: email,
+        otp: otp,
+        newPassword: newPassword,
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(Failure.auth(e.toString().replaceAll('Exception: ', '')));
+    }
+  }
+
+  @override
   Future<Either<Failure, UserProfile>> register({
     required String email,
     required String password,

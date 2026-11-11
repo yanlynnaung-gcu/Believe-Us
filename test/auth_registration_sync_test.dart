@@ -10,6 +10,7 @@ import 'package:thae_nge_lay/features/auth/data/repositories/auth_repository_imp
 import 'package:thae_nge_lay/features/auth/domain/models/user_profile.dart';
 import 'package:thae_nge_lay/features/auth/domain/repositories/auth_repository.dart';
 import 'package:thae_nge_lay/features/auth/presentation/controllers/auth_state_notifier.dart';
+import 'package:thae_nge_lay/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:thae_nge_lay/features/auth/presentation/screens/login_screen.dart';
 import 'package:thae_nge_lay/features/auth/presentation/screens/otp_verify_screen.dart';
 import 'package:thae_nge_lay/features/home/presentation/controllers/couple_media_controller.dart';
@@ -39,6 +40,20 @@ class MockAuthRepository implements AuthRepository {
       isProfileComplete: false,
     );
     return Right((user: user, isNewUser: true));
+  }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> sendForgotPasswordOtp(String email) async {
+    return Right({'message': 'A 6-digit verification code has been sent to $email'});
+  }
+
+  @override
+  Future<Either<Failure, void>> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    return const Right(null);
   }
 
   @override
@@ -251,7 +266,7 @@ void main() {
       mockStorage = MockLocalStorageService();
     });
 
-    testWidgets('LoginScreen toggles between Email OTP, Sign In and Sign Up tabs cleanly', (tester) async {
+    testWidgets('LoginScreen toggles between Sign In and Sign Up tabs cleanly and shows Forgot Password', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -269,17 +284,15 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Initially on Free Email OTP tab
-      expect(find.text('Free Email OTP Sign-In'), findsOneWidget);
-      expect(find.text('Send 6-Digit OTP Code 💌'), findsOneWidget);
-      expect(find.text('Continue with Google Account'), findsOneWidget);
-
-      // Tap on "Sign In 💕" tab
-      await tester.tap(find.text('Sign In 💕'));
-      await tester.pumpAndSettle();
-
+      // Initially on Sign In tab (Email OTP tab removed)
       expect(find.text('Welcome Back, My Love'), findsOneWidget);
       expect(find.text('Sign In With Love 💕'), findsOneWidget);
+      expect(find.text('Forgot Password?'), findsOneWidget);
+      expect(find.text('Continue with Google Account'), findsOneWidget);
+
+      // Email OTP tab is removed completely
+      expect(find.text('Email OTP 💌'), findsNothing);
+      expect(find.text('Free Email OTP Sign-In'), findsNothing);
 
       // Tap on "Sign Up ✨" tab
       await tester.tap(find.text('Sign Up ✨'));
@@ -292,6 +305,55 @@ void main() {
       expect(find.text('Girlfriend'), findsOneWidget);
       expect(find.text('Your Birthday'), findsOneWidget);
       expect(find.text('Create Our Love Account ✨'), findsOneWidget);
+
+      // Tap back to "Sign In 💕" tab
+      await tester.tap(find.text('Sign In 💕'));
+      await tester.pumpAndSettle();
+      expect(find.text('Welcome Back, My Love'), findsOneWidget);
+      expect(find.text('Forgot Password?'), findsOneWidget);
+    });
+
+    testWidgets('ForgotPasswordScreen renders request OTP step and transitions to reset step', (tester) async {
+      tester.view.physicalSize = const Size(1170, 2532);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authRepositoryProvider.overrideWithValue(mockAuthRepo),
+            localStorageServiceProvider.overrideWithValue(mockStorage),
+          ],
+          child: ScreenUtilInit(
+            designSize: const Size(390, 844),
+            builder: (context, child) => const MaterialApp(
+              home: ForgotPasswordScreen(initialEmail: 'tester@believeus.app'),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Step 1: Request OTP
+      expect(find.text('Forgot Password'), findsOneWidget);
+      expect(find.text('Find Your Account'), findsOneWidget);
+      expect(find.text('tester@believeus.app'), findsOneWidget);
+      expect(find.text('Send 6-Digit OTP Code 💌'), findsOneWidget);
+
+      // Tap Send OTP
+      await tester.ensureVisible(find.text('Send 6-Digit OTP Code 💌'));
+      await tester.tap(find.text('Send 6-Digit OTP Code 💌'));
+      await tester.pumpAndSettle();
+
+      // Step 2: Reset Password with OTP
+      expect(find.text('Reset Password'), findsWidgets);
+      expect(find.text('Code sent to tester@believeus.app'), findsOneWidget);
+      expect(find.text('Enter 6-Digit Code'), findsOneWidget);
+      expect(find.text('New Password'), findsOneWidget);
+      expect(find.text('Confirm New Password'), findsOneWidget);
+      expect(find.text('Reset Password 💕'), findsOneWidget);
     });
 
     testWidgets('OtpVerifyScreen renders 6 digits and email recipient badge', (tester) async {

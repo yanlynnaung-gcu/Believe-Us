@@ -24,6 +24,16 @@ public class AuthController {
         return ResponseEntity.ok(authService.sendEmailOtp(request));
     }
 
+    @PostMapping("/forgot-password/send-otp")
+    public ResponseEntity<Map<String, Object>> sendForgotPasswordOtp(@Valid @RequestBody SendEmailOtpRequest request) {
+        return ResponseEntity.ok(authService.sendForgotPasswordOtp(request));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, Object>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        return ResponseEntity.ok(authService.resetPassword(request));
+    }
+
     @PostMapping("/email/verify-otp")
     public ResponseEntity<AuthResponse> verifyEmailOtp(@Valid @RequestBody VerifyEmailOtpRequest request) {
         return ResponseEntity.ok(authService.verifyEmailOtp(request));

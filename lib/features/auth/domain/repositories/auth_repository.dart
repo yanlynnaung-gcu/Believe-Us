@@ -11,6 +11,14 @@ abstract interface class AuthRepository {
     required String otp,
   });
 
+  Future<Either<Failure, Map<String, dynamic>>> sendForgotPasswordOtp(String email);
+
+  Future<Either<Failure, void>> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  });
+
   Future<Either<Failure, UserProfile>> register({
     required String email,
     required String password,

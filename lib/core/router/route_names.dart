@@ -1,6 +1,7 @@
 abstract final class AppRoutes {
   static const onboarding = '/onboarding';
   static const login = '/login';
+  static const forgotPassword = '/forgot-password';
   static const otpVerify = '/otp-verify';
   static const profileSetup = '/profile-setup';
   static const pairing = '/pairing';
