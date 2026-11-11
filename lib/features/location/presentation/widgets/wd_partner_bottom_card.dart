@@ -32,10 +32,11 @@ class WdPartnerBottomCard extends StatelessWidget {
       bottom: 24.h,
       left: 20.w,
       right: 20.w,
-      child: GlassmorphicCard(
-        padding: EdgeInsets.all(20.r),
-        surfaceColor: Colors.white.withValues(alpha: 0.95),
-        child: Column(
+      child: RepaintBoundary(
+        child: GlassmorphicCard(
+          padding: EdgeInsets.all(20.r),
+          surfaceColor: Colors.white.withValues(alpha: 0.95),
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
@@ -205,6 +206,7 @@ class WdPartnerBottomCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

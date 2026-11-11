@@ -20,11 +20,12 @@ class LivePartnerTrustPill extends ConsumerWidget {
     final status = ref.watch(partnerLocationProvider);
     final partnerAvatarPath = ref.watch(coupleMediaProvider.select((m) => m.partnerAvatarPath));
 
-    return GlassmorphicCard(
-      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      onTap: onTap,
-      child: Row(
+    return RepaintBoundary(
+      child: GlassmorphicCard(
+        margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+        onTap: onTap,
+        child: Row(
         children: [
           // Small Partner Avatar with live green pulse
           Stack(
@@ -125,6 +126,7 @@ class LivePartnerTrustPill extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

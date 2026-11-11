@@ -59,10 +59,11 @@ class _WaveformPlayerBubbleState extends ConsumerState<WaveformPlayerBubble> {
     final seconds = durationSeconds % 60;
     final durationText = '$minutes:${seconds.toString().padLeft(2, '0')}';
 
-    return Container(
-      width: 220.w,
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-      child: Stack(
+    return RepaintBoundary(
+      child: Container(
+        width: 220.w,
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+        child: Stack(
         clipBehavior: Clip.none,
         children: [
           Row(
@@ -170,6 +171,7 @@ class _WaveformPlayerBubbleState extends ConsumerState<WaveformPlayerBubble> {
             ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

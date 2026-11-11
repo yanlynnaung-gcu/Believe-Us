@@ -37,59 +37,64 @@ class WdTrustedPlacesTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final places = state.trustedPlaces;
 
-    return ListView(
+    return ListView.builder(
       controller: scrollController,
       padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-      children: [
-        // Add Place Button
-        GestureDetector(
-          onTap: onAddPlace,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-            decoration: BoxDecoration(
-              color: BelieveColors.primarySoft,
-              borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(
-                color: BelieveColors.primary.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  LucideIcons.plusCircle,
-                  color: BelieveColors.primary,
-                  size: 18,
-                ),
-                SizedBox(width: 8.w),
-                Text(
-                  '+ Add Trusted Place (150m Geofence)',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.w700,
-                    color: BelieveColors.primaryDark,
+      itemCount: places.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: 16.h),
+            child: GestureDetector(
+              onTap: onAddPlace,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                decoration: BoxDecoration(
+                  color: BelieveColors.primarySoft,
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(
+                    color: BelieveColors.primary.withValues(alpha: 0.3),
                   ),
                 ),
-              ],
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      LucideIcons.plusCircle,
+                      color: BelieveColors.primary,
+                      size: 18,
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      '+ Add Trusted Place (150m Geofence)',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                        color: BelieveColors.primaryDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        }
 
-        SizedBox(height: 16.h),
-
-        ...places.map((place) {
-          final iconData = _resolvePlaceIcon(place.iconName);
-          return Container(
+        final place = places[index - 1];
+        final iconData = _resolvePlaceIcon(place.iconName);
+        return RepaintBoundary(
+          child: Container(
             margin: EdgeInsets.only(bottom: 12.h),
             padding: EdgeInsets.all(14.r),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16.r),
               border: Border.all(color: BelieveColors.border),
-              boxShadow: [
+              boxShadow: const [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
+                  color: Color(0x0A000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
                 ),
               ],
             ),
@@ -135,9 +140,9 @@ class WdTrustedPlacesTab extends StatelessWidget {
                 ),
               ],
             ),
-          );
-        }),
-      ],
+          ),
+        );
+      },
     );
   }
 }

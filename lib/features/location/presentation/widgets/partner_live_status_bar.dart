@@ -25,12 +25,13 @@ class PartnerLiveStatusBar extends ConsumerWidget {
       return BelieveColors.error;
     }
 
-    return GlassmorphicCard(
-      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-      borderRadius: 22.r,
-      onTap: () => context.push(AppRoutes.map),
-      child: Row(
+    return RepaintBoundary(
+      child: GlassmorphicCard(
+        margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+        borderRadius: 22.r,
+        onTap: () => context.push(AppRoutes.map),
+        child: Row(
         children: [
           // Partner Avatar with pulsing live dot
           Stack(
@@ -159,6 +160,7 @@ class PartnerLiveStatusBar extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

@@ -102,11 +102,13 @@ class _EmergencyAlarmScreenState extends ConsumerState<EmergencyAlarmScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    WdEmergencyPulsingSiren(
-                      pulseController: _pulseController,
-                      isSender: isSender,
-                      senderName: senderName,
-                      partnerName: partnerName,
+                    RepaintBoundary(
+                      child: WdEmergencyPulsingSiren(
+                        pulseController: _pulseController,
+                        isSender: isSender,
+                        senderName: senderName,
+                        partnerName: partnerName,
+                      ),
                     ),
                     SizedBox(height: 20.h),
                     WdEmergencyLocationBadge(activeAlert: activeAlert),

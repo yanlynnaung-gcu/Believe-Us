@@ -21,8 +21,9 @@ class WdLocationHeader extends StatelessWidget {
       top: MediaQuery.of(context).padding.top + 8.h,
       left: 16.w,
       right: 16.w,
-      child: Row(
-        children: [
+      child: RepaintBoundary(
+        child: Row(
+          children: [
           GestureDetector(
             onTap: onBack,
             child: Container(
@@ -88,6 +89,7 @@ class WdLocationHeader extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

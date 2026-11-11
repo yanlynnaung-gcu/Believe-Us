@@ -62,19 +62,21 @@ class _FloatingGlassNavBarState extends ConsumerState<FloatingGlassNavBar>
 
     final safeAreaBottom = MediaQuery.paddingOf(context).bottom;
 
-    return GlassmorphicCard(
-      borderRadius: 36.r,
-      margin: EdgeInsets.fromLTRB(
-        20.w,
-        0,
-        20.w,
-        safeAreaBottom > 0 ? safeAreaBottom : 16.h,
-      ),
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-      surfaceColor: Colors.white.withValues(alpha: 0.9),
-      borderColor: BelieveColors.glassBorder,
-      borderWidth: 1.5,
-      child: Row(
+    return RepaintBoundary(
+      child: GlassmorphicCard(
+        enableBlur: true,
+        borderRadius: 36.r,
+        margin: EdgeInsets.fromLTRB(
+          20.w,
+          0,
+          20.w,
+          safeAreaBottom > 0 ? safeAreaBottom : 16.h,
+        ),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+        surfaceColor: Colors.white.withValues(alpha: 0.9),
+        borderColor: BelieveColors.glassBorder,
+        borderWidth: 1.5,
+        child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: List.generate(tabs.length, (index) {
           final isSelected = widget.selectedIndex == index;
@@ -129,8 +131,9 @@ class _FloatingGlassNavBarState extends ConsumerState<FloatingGlassNavBar>
           );
         }),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 /// Typedef so both naming conventions (RomanticBottomNavBar & FloatingGlassNavBar) are 100% supported

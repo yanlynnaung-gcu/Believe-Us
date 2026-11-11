@@ -56,24 +56,48 @@ class _AnniversaryScreenState extends ConsumerState<AnniversaryScreen> {
         ],
       ),
       body: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
-          children: [
-            WdAnniversaryDaysBanner(daysTogether: state.daysTogether),
-            SizedBox(height: 24.h),
-            Text(
-              'Couple Milestones & Memories',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w800,
-                color: BelieveColors.textPrimary,
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    WdAnniversaryDaysBanner(daysTogether: state.daysTogether),
+                    SizedBox(height: 24.h),
+                    Text(
+                      'Couple Milestones & Memories',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w800,
+                        color: BelieveColors.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    if (state.milestones.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(child: Text('No milestones added yet.')),
+                      ),
+                  ],
+                ),
               ),
             ),
-            SizedBox(height: 12.h),
-            if (state.milestones.isEmpty)
-              const Center(child: Text('No milestones added yet.'))
-            else
-              ...state.milestones.map((m) => WdMilestoneCard(milestone: m)),
+            if (state.milestones.isNotEmpty)
+              SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w),
+                sliver: SliverList.builder(
+                  itemCount: state.milestones.length,
+                  itemBuilder: (context, index) {
+                    final milestone = state.milestones[index];
+                    return RepaintBoundary(
+                      child: WdMilestoneCard(milestone: milestone),
+                    );
+                  },
+                ),
+              ),
+            SliverToBoxAdapter(child: SizedBox(height: 24.h)),
           ],
         ),
       ),

@@ -125,16 +125,18 @@ class _PartnerLocationDetailScreenState
           SizedBox(
             height: 0.62.sh,
             width: double.infinity,
-            child: WdLocationMapView(
-              state: state,
-              coupleMedia: coupleMedia,
-              pulseAnimation: Tween<double>(begin: 1.0, end: 1.35).animate(
-                CurvedAnimation(
-                  parent: _pulseController,
-                  curve: Curves.easeInOut,
+            child: RepaintBoundary(
+              child: WdLocationMapView(
+                state: state,
+                coupleMedia: coupleMedia,
+                pulseAnimation: Tween<double>(begin: 1.0, end: 1.35).animate(
+                  CurvedAnimation(
+                    parent: _pulseController,
+                    curve: Curves.easeInOut,
+                  ),
                 ),
+                onMapCreated: (controller) => _mapController = controller,
               ),
-              onMapCreated: (controller) => _mapController = controller,
             ),
           ),
 

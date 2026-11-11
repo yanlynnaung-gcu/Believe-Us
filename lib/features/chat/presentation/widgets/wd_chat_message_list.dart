@@ -61,8 +61,9 @@ class WdChatMessageList extends StatelessWidget {
         final message = messages[index];
         final isMe = message.senderId == currentUserId;
 
-        return Align(
-          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        return RepaintBoundary(
+          child: Align(
+            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
             margin: EdgeInsets.only(bottom: 12.h),
             decoration: BoxDecoration(
@@ -140,8 +141,9 @@ class WdChatMessageList extends StatelessWidget {
               ],
             ),
           ),
-        );
-      },
+        ),
+      );
+    },
     );
   }
 }

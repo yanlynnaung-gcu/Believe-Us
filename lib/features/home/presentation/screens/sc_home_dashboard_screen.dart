@@ -174,9 +174,11 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const FullBleedCoupleHero(),
+          const RepaintBoundary(child: FullBleedCoupleHero()),
           Transform.translate(offset: Offset(0, -32.h), child: const InterlockingDualAvatars()),
-          LivePartnerTrustPill(onTap: () => context.push(AppRoutes.locationDetails)),
+          RepaintBoundary(
+            child: LivePartnerTrustPill(onTap: () => context.push(AppRoutes.locationDetails)),
+          ),
           const PartnerBirthdayGlassCard(),
           AnniversaryMilestoneGlassCard(onTapAdd: () => context.push(AppRoutes.anniversary)),
           SizedBox(height: 12.h),

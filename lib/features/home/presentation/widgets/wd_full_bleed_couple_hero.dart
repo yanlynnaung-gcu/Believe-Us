@@ -22,8 +22,9 @@ class FullBleedCoupleHero extends ConsumerWidget {
     final media = ref.watch(coupleMediaProvider);
     final heroHeight = 0.40.sh;
 
-    return Stack(
-      children: [
+    return RepaintBoundary(
+      child: Stack(
+        children: [
         // Shared Couple Photo
         Container(
           height: heroHeight,
@@ -190,6 +191,7 @@ class FullBleedCoupleHero extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 }

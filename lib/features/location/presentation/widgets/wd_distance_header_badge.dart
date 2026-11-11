@@ -23,11 +23,12 @@ class WdDistanceHeaderBadge extends StatelessWidget {
       left: 0,
       right: 0,
       child: Center(
-        child: GlassmorphicCard(
-          borderRadius: 24.r,
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-          surfaceColor: Colors.white.withValues(alpha: 0.95),
-          child: Row(
+        child: RepaintBoundary(
+          child: GlassmorphicCard(
+            borderRadius: 24.r,
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+            surfaceColor: Colors.white.withValues(alpha: 0.95),
+            child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               ScaleTransition(
@@ -69,6 +70,7 @@ class WdDistanceHeaderBadge extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

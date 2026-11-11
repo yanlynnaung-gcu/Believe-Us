@@ -195,29 +195,31 @@ class _PartnerMapScreenState extends ConsumerState<PartnerMapScreen>
           fit: StackFit.expand,
           children: [
             Positioned.fill(
-              child: WdPartnerGoogleMap(
-                mapType: _currentMapType,
-                partnerPos: partnerPos,
-                userPos: _userLatLng,
-                partnerMarkerIcon: _partnerMarkerIcon,
-                userMarkerIcon: _userMarkerIcon,
-                partnerName: media.partnerName,
-                placeName: partner.placeName,
-                batteryLevel: partner.batteryLevel,
-                isCharging: partner.isCharging,
-                onMapCreated: (controller) {
-                  _mapController = controller;
-                  Future.delayed(const Duration(milliseconds: 600), () {
-                    PartnerMapMovementAnimator.fitBounds(
-                      controller: _mapController,
-                      userLatLng: _userLatLng,
-                      partnerLatLng: _currentPartnerLatLng,
-                    );
-                  });
-                },
-                onCameraMoveStarted: () {
-                  if (_isAutoTracking) setState(() => _isAutoTracking = false);
-                },
+              child: RepaintBoundary(
+                child: WdPartnerGoogleMap(
+                  mapType: _currentMapType,
+                  partnerPos: partnerPos,
+                  userPos: _userLatLng,
+                  partnerMarkerIcon: _partnerMarkerIcon,
+                  userMarkerIcon: _userMarkerIcon,
+                  partnerName: media.partnerName,
+                  placeName: partner.placeName,
+                  batteryLevel: partner.batteryLevel,
+                  isCharging: partner.isCharging,
+                  onMapCreated: (controller) {
+                    _mapController = controller;
+                    Future.delayed(const Duration(milliseconds: 600), () {
+                      PartnerMapMovementAnimator.fitBounds(
+                        controller: _mapController,
+                        userLatLng: _userLatLng,
+                        partnerLatLng: _currentPartnerLatLng,
+                      );
+                    });
+                  },
+                  onCameraMoveStarted: () {
+                    if (_isAutoTracking) setState(() => _isAutoTracking = false);
+                  },
+                ),
               ),
             ),
             WdDistanceHeaderBadge(

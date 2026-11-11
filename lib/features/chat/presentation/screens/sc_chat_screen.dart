@@ -135,18 +135,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Opacity(
-              opacity: 0.12,
-              child: Image(
-                image: getCustomImageProvider(media.coverPhotoPath),
-                fit: BoxFit.cover,
+            child: RepaintBoundary(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Opacity(
+                    opacity: 0.12,
+                    child: Image(
+                      image: getCustomImageProvider(media.coverPhotoPath),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                    child: const DecoratedBox(
+                      decoration: BoxDecoration(color: Colors.transparent),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ),
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(color: Colors.transparent),
             ),
           ),
           SafeArea(

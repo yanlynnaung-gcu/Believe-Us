@@ -16,26 +16,28 @@ class WdDistancePill extends StatelessWidget {
       left: 0,
       right: 0,
       child: Center(
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 8.h),
-          decoration: BoxDecoration(
-            gradient: BelieveColors.romanticSunsetGradient,
-            borderRadius: BorderRadius.circular(24.r),
-            border: Border.all(color: Colors.white, width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: BelieveColors.primary.withValues(alpha: 0.25),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
+        child: RepaintBoundary(
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              gradient: BelieveColors.romanticSunsetGradient,
+              borderRadius: BorderRadius.circular(24.r),
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: BelieveColors.primary.withValues(alpha: 0.25),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Text(
+              '💞 ${distanceKm.toStringAsFixed(1)} km apart',
+              style: GoogleFonts.plusJakartaSans(
+                color: Colors.white,
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w800,
               ),
-            ],
-          ),
-          child: Text(
-            '💞 ${distanceKm.toStringAsFixed(1)} km apart',
-            style: GoogleFonts.plusJakartaSans(
-              color: Colors.white,
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w800,
             ),
           ),
         ),

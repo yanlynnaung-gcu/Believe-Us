@@ -85,15 +85,26 @@ class WdArrivalTimelineTab extends StatelessWidget {
               ? _formatDuration(log.departedAt!.difference(log.arrivedAt))
               : _formatDuration(DateTime.now().difference(log.arrivedAt));
 
-          return GestureDetector(
-            onTap: () => onLogSelected(log),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          return RepaintBoundary(
+            child: GestureDetector(
+              onTap: () => onLogSelected(log),
+              child: Stack(
                 children: [
-                  // Timeline node with indicator line
-                  Column(
+                  // Timeline connector line
+                  if (!isLast)
+                    Positioned(
+                      left: 13.r,
+                      top: 28.r,
+                      bottom: 0,
+                      child: Container(
+                        width: 2,
+                        color: BelieveColors.primary.withValues(alpha: 0.2),
+                      ),
+                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Timeline indicator node
                       Container(
                         width: 28.r,
                         height: 28.r,
@@ -116,20 +127,11 @@ class WdArrivalTimelineTab extends StatelessWidget {
                               isCurrent ? Colors.white : BelieveColors.primary,
                         ),
                       ),
-                      if (!isLast)
-                        Expanded(
-                          child: Container(
-                            width: 2,
-                            color: BelieveColors.primary.withValues(alpha: 0.2),
-                          ),
-                        ),
-                    ],
-                  ),
 
-                  SizedBox(width: 14.w),
+                      SizedBox(width: 14.w),
 
-                  // Arrival details card
-                  Expanded(
+                      // Arrival details card
+                      Expanded(
                     child: Container(
                       margin: EdgeInsets.only(bottom: 16.h),
                       padding: EdgeInsets.all(12.r),
@@ -214,9 +216,11 @@ class WdArrivalTimelineTab extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-          );
-        },
+            ],
+          ),
+        ),
+      );
+    },
       ),
     );
   }

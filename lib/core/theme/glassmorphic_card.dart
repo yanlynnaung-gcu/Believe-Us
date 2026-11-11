@@ -13,6 +13,9 @@ class GlassmorphicCard extends StatelessWidget {
   final Color? borderColor;
   final double borderWidth;
   final List<BoxShadow>? customShadows;
+  final bool enableBlur;
+
+  static const List<BoxShadow> defaultShadows = [BelieveColors.softRoseShadow];
 
   const GlassmorphicCard({
     super.key,
@@ -25,29 +28,34 @@ class GlassmorphicCard extends StatelessWidget {
     this.borderColor,
     this.borderWidth = 1.5,
     this.customShadows,
+    this.enableBlur = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(borderRadius ?? 24.r);
 
-    Widget content = ClipRRect(
-      borderRadius: radius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: Container(
-          padding: padding ?? EdgeInsets.all(18.r),
-          decoration: BoxDecoration(
-            color: surfaceColor ?? Colors.white.withValues(alpha: 0.85),
-            borderRadius: radius,
-            border: Border.all(
-              color: borderColor ?? BelieveColors.glassBorder,
-              width: borderWidth,
-            ),
-          ),
-          child: child,
+    final innerBox = Container(
+      padding: padding ?? EdgeInsets.all(18.r),
+      decoration: BoxDecoration(
+        color: surfaceColor ?? Colors.white.withValues(alpha: 0.90),
+        borderRadius: radius,
+        border: Border.all(
+          color: borderColor ?? BelieveColors.glassBorder,
+          width: borderWidth,
         ),
       ),
+      child: child,
+    );
+
+    Widget content = ClipRRect(
+      borderRadius: radius,
+      child: enableBlur
+          ? BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+              child: innerBox,
+            )
+          : innerBox,
     );
 
     if (onTap != null) {
@@ -58,7 +66,7 @@ class GlassmorphicCard extends StatelessWidget {
       margin: margin,
       decoration: BoxDecoration(
         borderRadius: radius,
-        boxShadow: customShadows ?? [BelieveColors.softRoseShadow],
+        boxShadow: customShadows ?? defaultShadows,
       ),
       child: content,
     );

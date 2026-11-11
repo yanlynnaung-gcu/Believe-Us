@@ -26,40 +26,42 @@ class WdMapControlPanel extends StatelessWidget {
     return Positioned(
       top: MediaQuery.of(context).padding.top + 56.h,
       right: 16.w,
-      child: Column(
-        children: [
-          WdMapControlBtn(
-            icon: LucideIcons.refreshCw,
-            tooltip: 'Sync Arrival Logs',
-            color: BelieveColors.primary,
-            onTap: onSync,
-          ),
-          SizedBox(height: 10.h),
-          WdMapControlBtn(
-            icon: LucideIcons.heartHandshake,
-            tooltip: 'Center on Partner',
-            color: BelieveColors.primary,
-            onTap: onCenterPartner,
-          ),
-          SizedBox(height: 10.h),
-          WdMapControlBtn(
-            icon: LucideIcons.compass,
-            tooltip: 'Show Both of Us',
-            color: BelieveColors.accentLavender,
-            onTap: onShowBoth,
-          ),
-          SizedBox(height: 10.h),
-          WdMapControlBtn(
-            icon: isSheetMinimized
-                ? LucideIcons.panelBottomOpen
-                : LucideIcons.panelBottomClose,
-            tooltip: isSheetMinimized
-                ? 'Show Arrival Logs'
-                : 'Full Screen Map',
-            color: BelieveColors.textPrimary,
-            onTap: onToggleSheet,
-          ),
-        ],
+      child: RepaintBoundary(
+        child: Column(
+          children: [
+            WdMapControlBtn(
+              icon: LucideIcons.refreshCw,
+              tooltip: 'Sync Arrival Logs',
+              color: BelieveColors.primary,
+              onTap: onSync,
+            ),
+            SizedBox(height: 10.h),
+            WdMapControlBtn(
+              icon: LucideIcons.heartHandshake,
+              tooltip: 'Center on Partner',
+              color: BelieveColors.primary,
+              onTap: onCenterPartner,
+            ),
+            SizedBox(height: 10.h),
+            WdMapControlBtn(
+              icon: LucideIcons.compass,
+              tooltip: 'Show Both of Us',
+              color: BelieveColors.accentLavender,
+              onTap: onShowBoth,
+            ),
+            SizedBox(height: 10.h),
+            WdMapControlBtn(
+              icon: isSheetMinimized
+                  ? LucideIcons.panelBottomOpen
+                  : LucideIcons.panelBottomClose,
+              tooltip: isSheetMinimized
+                  ? 'Show Arrival Logs'
+                  : 'Full Screen Map',
+              color: BelieveColors.textPrimary,
+              onTap: onToggleSheet,
+            ),
+          ],
+        ),
       ),
     );
   }

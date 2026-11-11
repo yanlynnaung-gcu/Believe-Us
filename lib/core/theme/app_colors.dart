@@ -82,10 +82,10 @@ abstract final class BelieveColors {
     end: Alignment.bottomRight,
   );
 
-  // Soft Rose Shadow
-  static final softRoseShadow = BoxShadow(
-    color: const Color(0xFFFF5E7E).withValues(alpha: 0.12),
-    blurRadius: 24,
-    offset: const Offset(0, 8),
+  // Soft Rose Shadow (Optimized compile-time constant for low GPU overhead)
+  static const softRoseShadow = BoxShadow(
+    color: Color(0x14FF5E7E),
+    blurRadius: 14,
+    offset: Offset(0, 4),
   );
 }

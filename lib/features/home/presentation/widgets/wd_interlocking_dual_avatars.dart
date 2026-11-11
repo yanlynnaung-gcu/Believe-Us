@@ -19,10 +19,11 @@ class InterlockingDualAvatars extends ConsumerWidget {
     final media = ref.watch(coupleMediaProvider);
     final anniversary = ref.watch(anniversaryProvider);
 
-    return Column(
-      children: [
-        SizedBox(
-          height: 110.h,
+    return RepaintBoundary(
+      child: Column(
+        children: [
+          SizedBox(
+            height: 110.h,
           child: Stack(
             alignment: Alignment.center,
             children: [
@@ -182,6 +183,7 @@ class InterlockingDualAvatars extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 }
