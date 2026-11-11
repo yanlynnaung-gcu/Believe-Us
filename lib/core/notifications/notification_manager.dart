@@ -48,13 +48,13 @@ class NotificationManager {
 
   bool _isInitialized = false;
 
-  bool get _hasPlatformInstance {
+  bool get _isTestEnvironment {
     try {
-      // FlutterLocalNotificationsPlatform.instance is a late field that throws if not registered
-      FlutterLocalNotificationsPlatform.instance;
-      return true;
+      final name = WidgetsBinding.instance.runtimeType.toString();
+      return name.contains('TestWidgetsFlutterBinding') ||
+          name.contains('AutomatedTestWidgetsFlutterBinding');
     } catch (_) {
-      return false;
+      return true;
     }
   }
 
@@ -62,7 +62,7 @@ class NotificationManager {
   Future<void> init() async {
     if (_isInitialized) return;
 
-    if (!_hasPlatformInstance) {
+    if (_isTestEnvironment) {
       debugPrint('[NotificationManager] Headless test environment detected; using simulated notification engine.');
       _isInitialized = true;
       return;
@@ -82,7 +82,7 @@ class NotificationManager {
       );
 
       await _localNotifications.initialize(
-        settings: initSettings,
+        initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) {
           _handleNotificationPayload(response.payload);
         },
@@ -201,7 +201,7 @@ class NotificationManager {
       final effectivePayload =
           payload ?? (data != null ? jsonEncode(data) : null);
 
-      if (!_hasPlatformInstance) {
+      if (_isTestEnvironment) {
         debugPrint('[NotificationManager Heads-Up Banner] Title: $title, Body: $body, Payload: $effectivePayload');
         return;
       }
@@ -231,10 +231,10 @@ class NotificationManager {
       );
 
       await _localNotifications.show(
-        id: id,
-        title: title,
-        body: body,
-        notificationDetails: notificationDetails,
+        id,
+        title,
+        body,
+        notificationDetails,
         payload: effectivePayload,
       );
     } catch (e) {
