@@ -6,12 +6,11 @@ import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:thae_nge_lay/core/network/api_client.dart';
 import 'package:thae_nge_lay/features/emergency/domain/models/emergency_sos_model.dart';
+import 'package:thae_nge_lay/services/mqtt_connection_manager.dart';
+import 'package:thae_nge_lay/services/mqtt_sos_message_parser.dart';
 
 part 'mqtt_sos_service.g.dart';
 
-/// Mission-Critical MQTT SOS Service for Offline Resilience
-/// Uses persistent sessions (cleanSession = false) and QoS 1 (At least once delivery)
-/// to ensure emergency alerts are reliably delivered even if a partner is temporarily offline.
 class MqttSosService {
   MqttServerClient? _client;
   String? _userId;
@@ -21,7 +20,6 @@ class MqttSosService {
   final StreamController<EmergencySOSAlert> _sosAlertController =
       StreamController<EmergencySOSAlert>.broadcast();
 
-  // Offline queue for resilient emergency dispatch when network is temporarily disconnected
   final List<EmergencySOSAlert> _offlineDispatchQueue = [];
   final List<EmergencySOSAlert> _publishedAlertsForTesting = [];
   bool _mockConnectedForTesting = false;
@@ -38,22 +36,17 @@ class MqttSosService {
       _coupleSpaceId != null ? 'couple/$_coupleSpaceId/emergency' : null;
 
   @visibleForTesting
-  List<EmergencySOSAlert> get publishedAlertsForTesting =>
-      List.unmodifiable(_publishedAlertsForTesting);
+  List<EmergencySOSAlert> get publishedAlertsForTesting => List.unmodifiable(_publishedAlertsForTesting);
 
   @visibleForTesting
-  List<EmergencySOSAlert> get offlineDispatchQueue =>
-      List.unmodifiable(_offlineDispatchQueue);
+  List<EmergencySOSAlert> get offlineDispatchQueue => List.unmodifiable(_offlineDispatchQueue);
 
   @visibleForTesting
   void setMockConnected(bool connected) {
     _mockConnectedForTesting = connected;
-    if (connected) {
-      _flushOfflineQueue();
-    }
+    if (connected) _flushOfflineQueue();
   }
 
-  /// Initializes credentials and establishes connection to the MQTT broker
   Future<void> initialize({
     required String? userId,
     required String? coupleSpaceId,
@@ -73,52 +66,32 @@ class MqttSosService {
     }
   }
 
-  /// Establishes persistent MQTT connection with cleanSession = false and auto-reconnect
   Future<bool> connect() async {
     if (_isConnecting || isConnected) return isConnected;
     if (_userId == null) return false;
 
-    // Cooldown check: if recent connection failed, throttle retries to prevent CPU spinning
     if (_lastConnectFailure != null &&
         DateTime.now().difference(_lastConnectFailure!).inSeconds < 10) {
       return false;
     }
 
     _isConnecting = true;
-
-    // Clean up any existing or dead client before instantiating a new one
-    if (_client != null) {
-      try {
-        _client!.disconnect();
-      } catch (_) {}
-      _client = null;
-    }
+    _cleanupClient();
 
     try {
       final host = ApiEndpoints.mqttBrokerHost;
       final port = ApiEndpoints.mqttPort;
-      // Stable persistent client identifier per user for QoS 1 session queuing
       final clientId = 'believeus_app_${_userId ?? "anon"}';
 
-      debugPrint(
-        '[MqttSosService] Connecting to MQTT broker at $host:$port with clientId: $clientId (cleanSession=false)...',
+      _client = MqttConnectionManager.createClient(
+        host: host,
+        port: port,
+        clientId: clientId,
+        onConnected: _onConnected,
+        onDisconnected: () => debugPrint('[MqttSosService] Disconnected.'),
+        onAutoReconnected: _onConnected,
+        onSubscribed: (t) => debugPrint('[MqttSosService] Subscribed: $t'),
       );
-
-      _client = MqttServerClient.withPort(host, clientId, port);
-      _client!.logging(on: false);
-      _client!.keepAlivePeriod = 30;
-      _client!.autoReconnect = true;
-      _client!.resubscribeOnAutoReconnect = true;
-
-      // CleanSession = false ensures the broker stores subscriptions and unacknowledged QoS 1 messages
-      final connMessage = MqttConnectMessage().withClientIdentifier(clientId);
-      connMessage.variableHeader?.connectFlags.cleanStart = false; // Persistent session
-      _client!.connectionMessage = connMessage;
-
-      _client!.onConnected = _onConnected;
-      _client!.onDisconnected = _onDisconnected;
-      _client!.onAutoReconnected = _onAutoReconnected;
-      _client!.onSubscribed = _onSubscribed;
 
       if (_mockConnectedForTesting) {
         _isConnecting = false;
@@ -150,24 +123,23 @@ class MqttSosService {
         return true;
       } else {
         _lastConnectFailure = DateTime.now();
-        debugPrint(
-          '[MqttSosService] Connection status not connected: ${status?.state}',
-        );
-        try {
-          _client?.disconnect();
-        } catch (_) {}
-        _client = null;
+        _cleanupClient();
         return false;
       }
     } catch (e) {
       _isConnecting = false;
       _lastConnectFailure = DateTime.now();
+      _cleanupClient();
+      return false;
+    }
+  }
+
+  void _cleanupClient() {
+    if (_client != null) {
       try {
-        _client?.disconnect();
+        _client!.disconnect();
       } catch (_) {}
       _client = null;
-      debugPrint('[MqttSosService] Connection failed (will auto-retry): $e');
-      return false;
     }
   }
 
@@ -177,27 +149,11 @@ class MqttSosService {
     _flushOfflineQueue();
   }
 
-  void _onDisconnected() {
-    debugPrint('[MqttSosService] Disconnected from MQTT broker.');
-  }
-
-  void _onAutoReconnected() {
-    debugPrint('[MqttSosService] Auto-reconnected to MQTT broker.');
-    _subscribeToEmergencyTopic();
-    _flushOfflineQueue();
-  }
-
-  void _onSubscribed(String topic) {
-    debugPrint('[MqttSosService] Subscribed to topic $topic with QoS 1.');
-  }
-
-  /// Subscribes to the couple space emergency topic with QoS 1 (At least once delivery)
   void _subscribeToEmergencyTopic() {
     if (_coupleSpaceId == null || !isConnected) return;
     final topic = 'couple/$_coupleSpaceId/emergency';
     try {
       _client!.subscribe(topic, MqttQos.atLeastOnce);
-      debugPrint('[MqttSosService] Subscribed to topic: $topic with QoS 1');
     } catch (e) {
       debugPrint('[MqttSosService] Subscribe error: $e');
     }
@@ -205,89 +161,50 @@ class MqttSosService {
 
   void _listenToIncomingUpdates() {
     _client?.updates?.listen(
-      (List<MqttReceivedMessage<MqttMessage?>>? messages) {
-        if (messages == null || messages.isEmpty) return;
-
-        for (final msg in messages) {
-          final pubMsg = msg.payload as MqttPublishMessage;
-          final payloadString = MqttPublishPayload.bytesToStringAsString(
-            pubMsg.payload.message,
+      (messages) {
+        if (messages.isNotEmpty) {
+          MqttSosMessageParser.processUpdates(
+            messages: messages,
+            currentUserId: _userId,
+            onAlertReceived: _sosAlertController.add,
           );
-
-          debugPrint(
-            '[MqttSosService] Received message on ${msg.topic} with QoS ${pubMsg.header?.qos}: $payloadString',
-          );
-
-          try {
-            final Map<String, dynamic> json =
-                jsonDecode(payloadString) as Map<String, dynamic>;
-            final alert = EmergencySOSAlert.fromJson(json);
-
-            // Ignore own broadcast
-            if (alert.senderId == _userId) {
-              debugPrint('[MqttSosService] Ignoring self-published SOS alert.');
-              continue;
-            }
-
-            _sosAlertController.add(alert);
-          } catch (e) {
-            debugPrint('[MqttSosService] Failed to parse emergency payload: $e');
-          }
         }
       },
-      onError: (err) {
-        debugPrint('[MqttSosService] Error in updates stream: $err');
-      },
+      onError: (err) => debugPrint('[MqttSosService] Updates error: $err'),
     );
   }
 
-  /// Publishes Emergency SOS alert payload with QoS 1 (At least once delivery)
   Future<bool> publishEmergencySOS({
     required String coupleSpaceId,
     required EmergencySOSAlert alert,
   }) async {
     final topic = 'couple/$coupleSpaceId/emergency';
     final payloadJson = jsonEncode(alert.toJson());
-
     _publishedAlertsForTesting.add(alert);
 
-    debugPrint(
-      '[MqttSosService] Publishing Emergency SOS to $topic (QoS 1): $payloadJson',
-    );
-
     if (!isConnected) {
-      debugPrint(
-        '[MqttSosService] Client offline; queuing SOS alert into persistent offline buffer...',
-      );
       _offlineDispatchQueue.add(alert);
-      // Attempt background connection
       connect();
       return false;
     }
 
-    if (_mockConnectedForTesting && (_client == null || _client?.connectionStatus?.state != MqttConnectionState.connected)) {
-      debugPrint(
-        '[MqttSosService] [TEST MOCK] Published emergency alert to $topic with QoS 1',
-      );
+    if (_mockConnectedForTesting &&
+        (_client == null ||
+            _client?.connectionStatus?.state != MqttConnectionState.connected)) {
       return true;
     }
 
     try {
       final builder = MqttClientPayloadBuilder();
       builder.addString(payloadJson);
-
       _client!.publishMessage(
         topic,
-        MqttQos.atLeastOnce, // QoS 1 (At least once delivery)
+        MqttQos.atLeastOnce,
         builder.payload!,
         retain: false,
       );
-      debugPrint(
-        '[MqttSosService] Successfully published emergency alert to $topic with QoS 1',
-      );
       return true;
     } catch (e) {
-      debugPrint('[MqttSosService] Publish failed: $e, queuing for retry.');
       _offlineDispatchQueue.add(alert);
       return false;
     }
@@ -297,10 +214,6 @@ class MqttSosService {
     if (_offlineDispatchQueue.isEmpty || !isConnected || _coupleSpaceId == null) {
       return;
     }
-
-    debugPrint(
-      '[MqttSosService] Flushing ${_offlineDispatchQueue.length} queued offline emergency alerts...',
-    );
     final pending = List<EmergencySOSAlert>.from(_offlineDispatchQueue);
     _offlineDispatchQueue.clear();
 
@@ -309,7 +222,6 @@ class MqttSosService {
     }
   }
 
-  /// Simulation helper for testing incoming partner alerts
   @visibleForTesting
   void simulateIncomingAlert(EmergencySOSAlert alert) {
     _sosAlertController.add(alert);
@@ -318,10 +230,7 @@ class MqttSosService {
   Future<void> disconnect() async {
     _connectTimeoutTimer?.cancel();
     _connectTimeoutTimer = null;
-    try {
-      _client?.disconnect();
-    } catch (_) {}
-    _client = null;
+    _cleanupClient();
   }
 
   void dispose() {

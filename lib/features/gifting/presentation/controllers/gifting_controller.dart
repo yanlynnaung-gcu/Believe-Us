@@ -1,84 +1,15 @@
-import 'package:flutter/foundation.dart';
-import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:thae_nge_lay/core/network/websocket_sync_service.dart';
 import 'package:thae_nge_lay/features/auth/presentation/controllers/auth_state_notifier.dart';
-import 'package:thae_nge_lay/features/chat/data/repositories/chat_repository_impl.dart';
 import 'package:thae_nge_lay/features/gifting/data/repositories/gifting_repository_impl.dart';
 import 'package:thae_nge_lay/features/gifting/data/services/gifting_payment_intent_service.dart';
 import 'package:thae_nge_lay/features/gifting/domain/models/gift_package.dart';
 import 'package:thae_nge_lay/features/gifting/domain/models/gift_transaction.dart';
+import 'package:thae_nge_lay/features/gifting/presentation/controllers/gift_notification_dispatcher.dart';
+import 'package:thae_nge_lay/features/gifting/presentation/controllers/gifting_ui_state.dart';
+
+export 'gifting_ui_state.dart';
 
 part 'gifting_controller.g.dart';
-
-/// Context for an active pending payment in external wallet app
-class PendingPaymentSession {
-  final String orderId;
-  final String transactionRef;
-  final GiftPackage package;
-  final PaymentProvider provider;
-  final int amountMmK;
-  final String note;
-  final String senderId;
-  final String receiverId;
-  final String coupleSpaceId;
-  final DateTime initiatedAt;
-  final String deepLinkUrl;
-  final String fallbackWebUrl;
-
-  const PendingPaymentSession({
-    required this.orderId,
-    required this.transactionRef,
-    required this.package,
-    required this.provider,
-    required this.amountMmK,
-    required this.note,
-    required this.senderId,
-    required this.receiverId,
-    required this.coupleSpaceId,
-    required this.initiatedAt,
-    required this.deepLinkUrl,
-    required this.fallbackWebUrl,
-  });
-}
-
-class GiftingUIState {
-  final bool isProcessing;
-  final bool isAwaitingExternalPayment;
-  final PendingPaymentSession? activeSession;
-  final String? errorMessage;
-  final GiftTransaction? completedTransaction;
-
-  const GiftingUIState({
-    this.isProcessing = false,
-    this.isAwaitingExternalPayment = false,
-    this.activeSession,
-    this.errorMessage,
-    this.completedTransaction,
-  });
-
-  GiftingUIState copyWith({
-    bool? isProcessing,
-    bool? isAwaitingExternalPayment,
-    PendingPaymentSession? activeSession,
-    String? errorMessage,
-    GiftTransaction? completedTransaction,
-    bool clearError = false,
-    bool clearTransaction = false,
-    bool clearSession = false,
-  }) {
-    return GiftingUIState(
-      isProcessing: isProcessing ?? this.isProcessing,
-      isAwaitingExternalPayment:
-          isAwaitingExternalPayment ?? this.isAwaitingExternalPayment,
-      activeSession: clearSession ? null : (activeSession ?? this.activeSession),
-      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      completedTransaction: clearTransaction
-          ? null
-          : (completedTransaction ?? this.completedTransaction),
-    );
-  }
-}
 
 @riverpod
 class GiftingController extends _$GiftingController {
@@ -92,7 +23,17 @@ class GiftingController extends _$GiftingController {
     return const GiftingUIState();
   }
 
-  /// 1. Constructs deep link, sets waiting state, and launches KBZPay/WavePay app
+  (String, String) _getPartnerIds() {
+    final user = ref.read(authStateProvider);
+    if (user == null) throw Exception('Please sign in first.');
+    final partnerId = user.partnerId;
+    final spaceId = user.coupleSpaceId;
+    if (partnerId == null || spaceId == null) {
+      throw Exception('Please pair with your partner before sending gifts.');
+    }
+    return (partnerId, spaceId);
+  }
+
   Future<PendingPaymentSession?> startExternalPayment({
     required GiftPackage package,
     required PaymentProvider provider,
@@ -101,17 +42,13 @@ class GiftingController extends _$GiftingController {
     String? customCallbackUrl,
   }) async {
     final user = ref.read(authStateProvider);
-    if (user == null) {
-      state = state.copyWith(errorMessage: 'Please sign in first.');
-      return null;
-    }
-
-    final partnerId = user.partnerId;
-    final coupleSpaceId = user.coupleSpaceId;
-    if (partnerId == null || coupleSpaceId == null) {
-      state = state.copyWith(
-        errorMessage: 'Please pair with your partner before sending gifts.',
-      );
+    String partnerId, coupleSpaceId;
+    try {
+      final ids = _getPartnerIds();
+      partnerId = ids.$1;
+      coupleSpaceId = ids.$2;
+    } catch (e) {
+      state = state.copyWith(errorMessage: e.toString().replaceAll('Exception: ', ''));
       return null;
     }
 
@@ -122,34 +59,15 @@ class GiftingController extends _$GiftingController {
         '$prefix-${DateTime.now().millisecondsSinceEpoch % 1000000}';
 
     final intentUrl = GiftingPaymentIntentService.buildPaymentIntentUrl(
-      provider: provider,
-      orderId: orderId,
-      amountMmK: amount,
-      packageTitle: package.title,
-      callbackUrl: customCallbackUrl,
-    );
-
+      provider: provider, orderId: orderId, amountMmK: amount, packageTitle: package.title, callbackUrl: customCallbackUrl);
     final fallbackWebUrl = GiftingPaymentIntentService.buildFallbackWebUrl(
-      provider: provider,
-      orderId: orderId,
-      amountMmK: amount,
-      packageTitle: package.title,
-      callbackUrl: customCallbackUrl,
-    );
+      provider: provider, orderId: orderId, amountMmK: amount, packageTitle: package.title, callbackUrl: customCallbackUrl);
 
     final session = PendingPaymentSession(
-      orderId: orderId,
-      transactionRef: transactionRef,
-      package: package,
-      provider: provider,
-      amountMmK: amount,
-      note: note,
-      senderId: user.id,
-      receiverId: partnerId,
-      coupleSpaceId: coupleSpaceId,
-      initiatedAt: DateTime.now(),
-      deepLinkUrl: intentUrl,
-      fallbackWebUrl: fallbackWebUrl,
+      orderId: orderId, transactionRef: transactionRef, package: package,
+      provider: provider, amountMmK: amount, note: note, senderId: user!.id,
+      receiverId: partnerId, coupleSpaceId: coupleSpaceId, initiatedAt: DateTime.now(),
+      deepLinkUrl: intentUrl, fallbackWebUrl: fallbackWebUrl,
     );
 
     _closeKeepAlive ??= ref.keepAlive().close;
@@ -162,7 +80,6 @@ class GiftingController extends _$GiftingController {
       clearTransaction: true,
     );
 
-    // Launch external mobile application via url_launcher
     await GiftingPaymentIntentService.launchPaymentApp(
       intentUrl: intentUrl,
       fallbackWebUrl: fallbackWebUrl,
@@ -171,7 +88,6 @@ class GiftingController extends _$GiftingController {
     return session;
   }
 
-  /// 2. Verifies transaction upon return (via deep link callback or app resumption)
   Future<GiftTransaction?> verifyPaymentReturn({
     String? status,
     String? orderId,
@@ -230,53 +146,14 @@ class GiftingController extends _$GiftingController {
         return null;
       },
       (transaction) async {
-        final chatRepo = ref.read(chatRepositoryProvider);
-        final formattedAmount =
-            '${NumberFormat('#,###').format(transaction.amountMmK)} MMK';
-        final providerName =
-            session.provider == PaymentProvider.kbzPay ? 'KBZPay' : 'WavePay';
-
-        // 1. Send in-chat gift card message
-        await chatRepo.sendGiftMessage(
+        await GiftNotificationDispatcher.notifyPartnerOfGift(
+          ref: ref,
           senderId: session.senderId,
           receiverId: session.receiverId,
           coupleSpaceId: session.coupleSpaceId,
-          giftData: {
-            'transactionId': transaction.id,
-            'transactionRef': transaction.transactionRef,
-            'amount': formattedAmount,
-            'amountRaw': transaction.amountMmK,
-            'packageName': transaction.packageTitle,
-            'provider': providerName,
-            'note': transaction.note,
-            'sentAt': transaction.createdAt.toIso8601String(),
-          },
+          transaction: transaction,
+          provider: session.provider,
         );
-
-        // 2. Dispatch real-time WebSocket confirmation event to notify partner
-        try {
-          final ws = ref.read(webSocketSyncServiceProvider);
-          ws.sendEvent(
-            event: 'GIFT_RECEIVED',
-            data: {
-              'id': transaction.id,
-              'transactionId': transaction.id,
-              'senderId': session.senderId,
-              'receiverId': session.receiverId,
-              'coupleSpaceId': session.coupleSpaceId,
-              'packageTitle': transaction.packageTitle,
-              'amountMmK': transaction.amountMmK,
-              'provider':
-                  session.provider == PaymentProvider.kbzPay ? 'KBZPAY' : 'WAVEPAY',
-              'transactionRef': transaction.transactionRef,
-              'status': 'PAID',
-              'note': transaction.note,
-              'createdAt': transaction.createdAt.toIso8601String(),
-            },
-          );
-        } catch (e) {
-          debugPrint('[WebSocket] Real-time gift notification warning: $e');
-        }
 
         _closeKeepAlive?.call();
         _closeKeepAlive = null;
@@ -291,7 +168,6 @@ class GiftingController extends _$GiftingController {
     );
   }
 
-  /// Cancels any active pending payment session
   void cancelPendingPayment() {
     _closeKeepAlive?.call();
     _closeKeepAlive = null;
@@ -302,7 +178,6 @@ class GiftingController extends _$GiftingController {
     );
   }
 
-  /// Direct synchronous payment dispatch (for automated flows or testing)
   Future<GiftTransaction?> sendGift({
     required GiftPackage package,
     required PaymentProvider provider,
@@ -311,17 +186,13 @@ class GiftingController extends _$GiftingController {
     String? transactionRef,
   }) async {
     final user = ref.read(authStateProvider);
-    if (user == null) {
-      state = state.copyWith(errorMessage: 'Please sign in first.');
-      return null;
-    }
-
-    final partnerId = user.partnerId;
-    final coupleSpaceId = user.coupleSpaceId;
-    if (partnerId == null || coupleSpaceId == null) {
-      state = state.copyWith(
-        errorMessage: 'Please pair with your partner before sending gifts.',
-      );
+    String partnerId, coupleSpaceId;
+    try {
+      final ids = _getPartnerIds();
+      partnerId = ids.$1;
+      coupleSpaceId = ids.$2;
+    } catch (e) {
+      state = state.copyWith(errorMessage: e.toString().replaceAll('Exception: ', ''));
       return null;
     }
 
@@ -330,7 +201,7 @@ class GiftingController extends _$GiftingController {
 
     final giftingRepo = ref.read(giftingRepositoryProvider);
     final result = await giftingRepo.initiateAndVerifyPayment(
-      senderId: user.id,
+      senderId: user!.id,
       receiverId: partnerId,
       coupleSpaceId: coupleSpaceId,
       packageTitle: package.title,
@@ -349,53 +220,14 @@ class GiftingController extends _$GiftingController {
         return null;
       },
       (transaction) async {
-        final chatRepo = ref.read(chatRepositoryProvider);
-        final formattedAmount =
-            '${NumberFormat('#,###').format(transaction.amountMmK)} MMK';
-        final providerName =
-            provider == PaymentProvider.kbzPay ? 'KBZPay' : 'WavePay';
-
-        // 1. In-chat gift message
-        await chatRepo.sendGiftMessage(
+        await GiftNotificationDispatcher.notifyPartnerOfGift(
+          ref: ref,
           senderId: user.id,
           receiverId: partnerId,
           coupleSpaceId: coupleSpaceId,
-          giftData: {
-            'transactionId': transaction.id,
-            'transactionRef': transaction.transactionRef,
-            'amount': formattedAmount,
-            'amountRaw': transaction.amountMmK,
-            'packageName': transaction.packageTitle,
-            'provider': providerName,
-            'note': transaction.note,
-            'sentAt': transaction.createdAt.toIso8601String(),
-          },
+          transaction: transaction,
+          provider: provider,
         );
-
-        // 2. Real-time WebSocket confirmation
-        try {
-          final ws = ref.read(webSocketSyncServiceProvider);
-          ws.sendEvent(
-            event: 'GIFT_RECEIVED',
-            data: {
-              'id': transaction.id,
-              'transactionId': transaction.id,
-              'senderId': user.id,
-              'receiverId': partnerId,
-              'coupleSpaceId': coupleSpaceId,
-              'packageTitle': transaction.packageTitle,
-              'amountMmK': transaction.amountMmK,
-              'provider':
-                  provider == PaymentProvider.kbzPay ? 'KBZPAY' : 'WAVEPAY',
-              'transactionRef': transaction.transactionRef,
-              'status': 'PAID',
-              'note': transaction.note,
-              'createdAt': transaction.createdAt.toIso8601String(),
-            },
-          );
-        } catch (e) {
-          debugPrint('[WebSocket] Real-time gift notification warning: $e');
-        }
 
         state = state.copyWith(
           isProcessing: false,

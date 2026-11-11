@@ -1,48 +1,18 @@
-import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:thae_nge_lay/core/theme/app_colors.dart';
+import 'package:thae_nge_lay/features/location/presentation/utils/image_resolver.dart';
+import 'package:thae_nge_lay/features/location/presentation/utils/marker_canvas_helpers.dart';
 
 class RomanticMarkerGenerator {
   static final Map<String, BitmapDescriptor> _markerCache = {};
 
-  /// Resolves any Flutter ImageProvider into a dart:ui Image
   static Future<ui.Image?> resolveImage(
     ImageProvider provider, {
     Duration timeout = const Duration(seconds: 4),
-  }) async {
-    final completer = Completer<ui.Image?>();
-    final stream = provider.resolve(
-      const ImageConfiguration(size: Size(160, 160)),
-    );
-
-    late ImageStreamListener listener;
-    listener = ImageStreamListener(
-      (ImageInfo info, bool synchronousCall) {
-        if (!completer.isCompleted) {
-          completer.complete(info.image);
-        }
-        stream.removeListener(listener);
-      },
-      onError: (exception, stackTrace) {
-        if (!completer.isCompleted) {
-          completer.complete(null);
-        }
-        stream.removeListener(listener);
-      },
-    );
-
-    stream.addListener(listener);
-
-    return completer.future.timeout(
-      timeout,
-      onTimeout: () {
-        stream.removeListener(listener);
-        return null;
-      },
-    );
-  }
+  }) =>
+      resolveImageToDartUi(provider, timeout: timeout);
 
   /// Generates a high-resolution romantic pin marker with avatar, badge, and label
   static Future<BitmapDescriptor> createCoupleMarker({
@@ -59,7 +29,7 @@ class RomanticMarkerGenerator {
     ui.Image? avatarImage;
     if (avatarProvider != null) {
       try {
-        avatarImage = await resolveImage(avatarProvider);
+        avatarImage = await resolveImageToDartUi(avatarProvider);
       } catch (_) {
         avatarImage = null;
       }
@@ -124,7 +94,6 @@ class RomanticMarkerGenerator {
       );
       canvas.drawImageRect(avatarImage, src, avatarClipRect, Paint());
     } else {
-      // Gradient background placeholder
       final bgGradient = ui.Gradient.linear(
         Offset(centerX, avatarCenterY - avatarRadius),
         Offset(centerX, avatarCenterY + avatarRadius),
@@ -140,8 +109,7 @@ class RomanticMarkerGenerator {
         bgPaint,
       );
 
-      // Cute heart / initial icon in center
-      _drawCenteredHeart(
+      MarkerCanvasHelpers.drawCenteredHeart(
         canvas,
         const Offset(centerX, avatarCenterY),
         color: Colors.white,
@@ -158,30 +126,20 @@ class RomanticMarkerGenerator {
     final badgeWhiteBg = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(
-      Offset(badgeCenterX, badgeCenterY),
-      badgeRadius + 2,
-      badgeWhiteBg,
-    );
+    canvas.drawCircle(Offset(badgeCenterX, badgeCenterY), badgeRadius + 2, badgeWhiteBg);
 
-    final badgePaint = Paint()
-      ..color = borderColor
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(
-      Offset(badgeCenterX, badgeCenterY),
-      badgeRadius,
-      badgePaint,
-    );
+    final badgePaint = Paint()..color = borderColor..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(badgeCenterX, badgeCenterY), badgeRadius, badgePaint);
 
     if (isPartner) {
-      _drawCenteredHeart(
+      MarkerCanvasHelpers.drawCenteredHeart(
         canvas,
         Offset(badgeCenterX, badgeCenterY),
         color: Colors.white,
         size: 16,
       );
     } else {
-      _drawCenteredNavArrow(
+      MarkerCanvasHelpers.drawCenteredNavArrow(
         canvas,
         Offset(badgeCenterX, badgeCenterY),
         color: Colors.white,
@@ -202,26 +160,20 @@ class RomanticMarkerGenerator {
       const Radius.circular(18.0),
     );
 
-    // Pill shadow
     final pillShadowPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.12)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6.0);
     canvas.drawRRect(pillRect.shift(const Offset(0, 3)), pillShadowPaint);
 
-    // Pill fill
-    final pillFillPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
+    final pillFillPaint = Paint()..color = Colors.white..style = PaintingStyle.fill;
     canvas.drawRRect(pillRect, pillFillPaint);
 
-    // Pill stroke
     final pillStrokePaint = Paint()
       ..color = borderColor.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
     canvas.drawRRect(pillRect, pillStrokePaint);
 
-    // Text inside pill
     final textBuilder = ui.ParagraphBuilder(
       ui.ParagraphStyle(
         textAlign: TextAlign.center,
@@ -249,22 +201,17 @@ class RomanticMarkerGenerator {
       ),
     );
 
-    // 7. Pin Stem & Pointing Tip to (centerX, height - 6)
+    // 7. Pin Stem & Pointing Tip
     final pinPath = Path()
       ..moveTo(centerX - 10, pillTop + pillHeight - 2)
       ..lineTo(centerX, height - 8)
       ..lineTo(centerX + 10, pillTop + pillHeight - 2)
       ..close();
 
-    final pinPaint = Paint()
-      ..color = borderColor
-      ..style = PaintingStyle.fill;
+    final pinPaint = Paint()..color = borderColor..style = PaintingStyle.fill;
     canvas.drawPath(pinPath, pinPaint);
 
-    // Coordinate anchor dot at exact bottom tip
-    final anchorDotPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
+    final anchorDotPaint = Paint()..color = Colors.white..style = PaintingStyle.fill;
     canvas.drawCircle(const Offset(centerX, height - 8), 5.0, anchorDotPaint);
 
     final anchorBorderPaint = Paint()
@@ -273,7 +220,6 @@ class RomanticMarkerGenerator {
       ..strokeWidth = 2.5;
     canvas.drawCircle(const Offset(centerX, height - 8), 5.0, anchorBorderPaint);
 
-    // Render to PNG image bytes
     final picture = recorder.endRecording();
     final img = await picture.toImage(width.toInt(), height.toInt());
     final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
@@ -288,83 +234,6 @@ class RomanticMarkerGenerator {
       _markerCache[cacheKey] = descriptor;
     }
     return descriptor;
-  }
-
-  static void _drawCenteredHeart(
-    Canvas canvas,
-    Offset center, {
-    required Color color,
-    required double size,
-  }) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    final path = Path();
-    final w = size;
-    final h = size;
-
-    final left = center.dx - (w / 2);
-    final top = center.dy - (h / 2);
-
-    path.moveTo(left + w / 2, top + h * 0.82);
-    path.cubicTo(
-      left + w * 0.1,
-      top + h * 0.55,
-      left,
-      top + h * 0.28,
-      left + w * 0.25,
-      top + h * 0.1,
-    );
-    path.cubicTo(
-      left + w * 0.45,
-      top - h * 0.02,
-      left + w / 2,
-      top + h * 0.25,
-      left + w / 2,
-      top + h * 0.25,
-    );
-    path.cubicTo(
-      left + w / 2,
-      top + h * 0.25,
-      left + w * 0.55,
-      top - h * 0.02,
-      left + w * 0.75,
-      top + h * 0.1,
-    );
-    path.cubicTo(
-      left + w,
-      top + h * 0.28,
-      left + w * 0.9,
-      top + h * 0.55,
-      left + w / 2,
-      top + h * 0.82,
-    );
-    path.close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  static void _drawCenteredNavArrow(
-    Canvas canvas,
-    Offset center, {
-    required Color color,
-    required double size,
-  }) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    final path = Path();
-    final half = size / 2;
-
-    path.moveTo(center.dx, center.dy - half);
-    path.lineTo(center.dx + half, center.dy + half);
-    path.lineTo(center.dx, center.dy + (half * 0.4));
-    path.lineTo(center.dx - half, center.dy + half);
-    path.close();
-
-    canvas.drawPath(path, paint);
   }
 
   static void clearCache() {

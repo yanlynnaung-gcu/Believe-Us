@@ -1,26 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:thae_nge_lay/core/network/api_client.dart';
+import 'package:thae_nge_lay/core/network/websocket_event.dart';
+import 'package:thae_nge_lay/core/network/websocket_reconnect_tracker.dart';
+
+export 'websocket_event.dart';
 
 part 'websocket_sync_service.g.dart';
-
-class WebSocketEvent {
-  final String event;
-  final Map<String, dynamic> data;
-  final String? topic;
-  final String? coupleSpaceId;
-
-  const WebSocketEvent({
-    required this.event,
-    required this.data,
-    this.topic,
-    this.coupleSpaceId,
-  });
-}
 
 class WebSocketSyncService {
   WebSocketChannel? _channel;
@@ -32,12 +21,7 @@ class WebSocketSyncService {
   String? _currentCoupleSpaceId;
   bool _isConnecting = false;
 
-  // Exponential Backoff Auto-Reconnection Configuration
-  int _reconnectAttempts = 0;
-  static const int _initialRetryDelayMs = 2500; // 2.5 seconds to tolerate Railway cold starts
-  static const int _maxRetryDelayMs = 30000;    // 30 seconds
-  static const double _backoffMultiplier = 1.5;
-  final Random _random = Random();
+  final WebSocketReconnectTracker _tracker = WebSocketReconnectTracker();
 
   final StreamController<WebSocketEvent> _eventController =
       StreamController<WebSocketEvent>.broadcast();
@@ -110,13 +94,13 @@ class WebSocketSyncService {
 
     try {
       final uri = Uri.parse(ApiEndpoints.wsUrl);
-      debugPrint('[WebSocket] Connecting to $uri (Attempt $_reconnectAttempts) ...');
+      debugPrint('[WebSocket] Connecting to $uri (Attempt ${_tracker.attempts}) ...');
 
       _channel = WebSocketChannel.connect(uri);
 
       _channel?.ready.then((_) {
         _isConnecting = false;
-        _reconnectAttempts = 0;
+        _tracker.reset();
         debugPrint('[WebSocket] Handshake succeeded.');
         _subscribe();
         _startPing();
@@ -128,7 +112,7 @@ class WebSocketSyncService {
       _subscription = _channel!.stream.listen(
         (data) {
           _isConnecting = false;
-          _reconnectAttempts = 0; // Reset backoff counter on successful traffic
+          _tracker.reset();
           _handleMessage(data);
         },
         onError: (error) {
@@ -148,36 +132,22 @@ class WebSocketSyncService {
   }
 
   void _subscribe() {
-    if (_channel != null && _currentUserId != null) {
-      final topics = <String>[];
-      if (_currentCoupleSpaceId != null && _currentCoupleSpaceId!.isNotEmpty) {
-        final space = _currentCoupleSpaceId!;
-        topics.addAll([
-          '/topic/couple.$space.*',
-          '/topic/couple.$space.chat',
-          '/topic/couple.$space.location',
-          '/topic/couple.$space.gifts',
-          '/topic/couple.$space.status',
-          '/topic/couple.$space.milestones',
-        ]);
-      }
-
+    if (_channel == null || _currentUserId == null) return;
+    try {
+      final topics = WebSocketEvent.buildTopics(_currentCoupleSpaceId);
       final payload = jsonEncode({
         'action': 'SUBSCRIBE',
         'userId': _currentUserId,
         'coupleSpaceId': _currentCoupleSpaceId ?? '',
         'topics': topics,
       });
-
-      try {
-        _channel!.sink.add(payload);
-        debugPrint(
-          '[WebSocket] Subscribed User $_currentUserId to Space room $_currentCoupleSpaceId '
-          'with ${topics.length} isolated dynamic topics',
-        );
-      } catch (e) {
-        debugPrint('[WebSocket] Subscribe error: $e');
-      }
+      _channel!.sink.add(payload);
+      debugPrint(
+        '[WebSocket] Subscribed User $_currentUserId to Space $_currentCoupleSpaceId '
+        '(${topics.length} topics)',
+      );
+    } catch (e) {
+      debugPrint('[WebSocket] Subscribe error: $e');
     }
   }
 
@@ -225,24 +195,11 @@ class WebSocketSyncService {
     _cleanup();
 
     if (_currentUserId == null) return;
-
-    // Prevent duplicate reconnection triggers if a reconnect timer is already active
     if (_reconnectTimer != null && _reconnectTimer!.isActive) {
       return;
     }
 
-    // Calculate delay with exponential backoff and randomized jitter
-    final jitterMs = _random.nextInt(500);
-    final delayMs = (_initialRetryDelayMs * pow(_backoffMultiplier, _reconnectAttempts))
-        .clamp(0, _maxRetryDelayMs)
-        .toInt() + jitterMs;
-
-    _reconnectAttempts++;
-
-    debugPrint(
-      '[WebSocket Backoff] Reconnecting in ${delayMs}ms (Attempt #$_reconnectAttempts, max capped at ${_maxRetryDelayMs}ms)...',
-    );
-
+    final delayMs = _tracker.getNextDelayMs();
     _reconnectTimer = Timer(Duration(milliseconds: delayMs), () {
       if (_currentUserId != null) {
         connect();

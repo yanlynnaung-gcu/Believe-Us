@@ -2,35 +2,14 @@ import 'dart:async';
 import 'dart:io';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:thae_nge_lay/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:thae_nge_lay/features/auth/presentation/controllers/account_auth_operations.dart';
 import 'package:thae_nge_lay/features/auth/presentation/controllers/auth_state_notifier.dart';
+import 'package:thae_nge_lay/features/auth/presentation/controllers/auth_ui_state.dart';
+import 'package:thae_nge_lay/features/auth/presentation/controllers/profile_operations_helper.dart';
+
+export 'auth_ui_state.dart';
 
 part 'auth_controller.g.dart';
-
-class AuthUIState {
-  final bool isLoading;
-  final String? errorMessage;
-  final String? successMessage;
-
-  const AuthUIState({
-    this.isLoading = false,
-    this.errorMessage,
-    this.successMessage,
-  });
-
-  AuthUIState copyWith({
-    bool? isLoading,
-    String? errorMessage,
-    String? successMessage,
-    bool clearError = false,
-    bool clearSuccess = false,
-  }) {
-    return AuthUIState(
-      isLoading: isLoading ?? this.isLoading,
-      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      successMessage: clearSuccess ? null : (successMessage ?? this.successMessage),
-    );
-  }
-}
 
 @riverpod
 class AuthController extends _$AuthController {
@@ -41,25 +20,14 @@ class AuthController extends _$AuthController {
 
   Future<bool> sendEmailOtp(String email) async {
     state = state.copyWith(isLoading: true, clearError: true);
-    final repo = ref.read(authRepositoryProvider);
-    final result = await repo.sendEmailOtp(email);
-
-    return result.fold(
-      (failure) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: failure.message ?? 'Failed to send verification code.',
-        );
-        return false;
-      },
-      (data) {
-        state = state.copyWith(
-          isLoading: false,
-          successMessage: data['message'] as String? ?? 'Code sent to $email',
-        );
-        return true;
-      },
+    final success = await AccountAuthOperations.sendEmailOtp(
+      ref: ref,
+      email: email,
+      onError: (err) => state = state.copyWith(errorMessage: err),
+      onSuccess: (msg) => state = state.copyWith(successMessage: msg),
     );
+    state = state.copyWith(isLoading: false);
+    return success;
   }
 
   Future<({bool success, bool isNewUser})> verifyEmailOtp({
@@ -67,46 +35,26 @@ class AuthController extends _$AuthController {
     required String otp,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
-    final repo = ref.read(authRepositoryProvider);
-    final result = await repo.verifyEmailOtp(email: email, otp: otp);
-
-    return result.fold(
-      (failure) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: failure.message ?? 'Invalid or expired verification code.',
-        );
-        return (success: false, isNewUser: false);
-      },
-      (res) async {
-        await ref.read(authStateProvider.notifier).setUser(res.user);
-        state = state.copyWith(isLoading: false);
-        return (success: true, isNewUser: res.isNewUser);
-      },
+    final res = await AccountAuthOperations.verifyEmailOtp(
+      ref: ref,
+      email: email,
+      otp: otp,
+      onError: (err) => state = state.copyWith(errorMessage: err),
     );
+    state = state.copyWith(isLoading: false);
+    return res;
   }
 
   Future<bool> sendForgotPasswordOtp(String email) async {
     state = state.copyWith(isLoading: true, clearError: true);
-    final repo = ref.read(authRepositoryProvider);
-    final result = await repo.sendForgotPasswordOtp(email);
-
-    return result.fold(
-      (failure) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: failure.message ?? 'Failed to send verification code.',
-        );
-        return false;
-      },
-      (data) {
-        state = state.copyWith(
-          isLoading: false,
-          successMessage: data['message'] as String? ?? 'Code sent to $email',
-        );
-        return true;
-      },
+    final success = await AccountAuthOperations.sendForgotPasswordOtp(
+      ref: ref,
+      email: email,
+      onError: (err) => state = state.copyWith(errorMessage: err),
+      onSuccess: (msg) => state = state.copyWith(successMessage: msg),
     );
+    state = state.copyWith(isLoading: false);
+    return success;
   }
 
   Future<bool> resetPassword({
@@ -115,29 +63,16 @@ class AuthController extends _$AuthController {
     required String newPassword,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
-    final repo = ref.read(authRepositoryProvider);
-    final result = await repo.resetPassword(
+    final success = await AccountAuthOperations.resetPassword(
+      ref: ref,
       email: email,
       otp: otp,
       newPassword: newPassword,
+      onError: (err) => state = state.copyWith(errorMessage: err),
+      onSuccess: (msg) => state = state.copyWith(successMessage: msg),
     );
-
-    return result.fold(
-      (failure) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: failure.message ?? 'Failed to reset password.',
-        );
-        return false;
-      },
-      (_) {
-        state = state.copyWith(
-          isLoading: false,
-          successMessage: 'Password reset successfully! Please sign in with your new password.',
-        );
-        return true;
-      },
-    );
+    state = state.copyWith(isLoading: false);
+    return success;
   }
 
   Future<bool> register({
@@ -169,7 +104,8 @@ class AuthController extends _$AuthController {
       },
       (user) async {
         await ref.read(authStateProvider.notifier).setUser(user);
-        state = state.copyWith(isLoading: false, successMessage: 'Account created!');
+        state = state.copyWith(
+            isLoading: false, successMessage: 'Account created!');
         return true;
       },
     );
@@ -230,57 +166,25 @@ class AuthController extends _$AuthController {
   }
 
   Future<String?> uploadAvatar(File file) async {
-    final user = ref.read(authStateProvider);
-    if (user == null) return null;
-
     state = state.copyWith(isLoading: true, clearError: true);
-    final repo = ref.read(authRepositoryProvider);
-    final result = await repo.uploadAvatar(
-      userId: user.id,
-      avatarFile: file,
+    final url = await ProfileOperationsHelper.uploadAvatar(
+      ref: ref,
+      file: file,
+      onError: (err) => state = state.copyWith(errorMessage: err),
     );
-
-    return result.fold(
-      (failure) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: failure.message ?? 'Failed to upload profile photo.',
-        );
-        return null;
-      },
-      (url) async {
-        await ref.read(authStateProvider.notifier).updateProfile(
-              displayName: user.displayName,
-              photoUrl: url,
-            );
-        state = state.copyWith(isLoading: false);
-        return url;
-      },
-    );
+    state = state.copyWith(isLoading: false);
+    return url;
   }
 
   Future<String?> uploadCoverPhoto(File file) async {
-    final user = ref.read(authStateProvider);
-    final coupleSpaceId = user?.coupleSpaceId;
-    if (coupleSpaceId == null) return null;
-
     state = state.copyWith(isLoading: true, clearError: true);
-    final repo = ref.read(authRepositoryProvider);
-    final result = await repo.uploadCoverPhoto(
-      coupleSpaceId: coupleSpaceId,
-      coverFile: file,
+    final url = await ProfileOperationsHelper.uploadCoverPhoto(
+      ref: ref,
+      file: file,
+      onError: (err) => state = state.copyWith(errorMessage: err),
     );
-
     state = state.copyWith(isLoading: false);
-    return result.fold(
-      (failure) {
-        state = state.copyWith(
-          errorMessage: failure.message ?? 'Failed to upload couple photo.',
-        );
-        return null;
-      },
-      (url) => url,
-    );
+    return url;
   }
 
   Future<bool> completeProfile({
@@ -290,50 +194,18 @@ class AuthController extends _$AuthController {
     DateTime? birthday,
     String? role,
   }) async {
-    final user = ref.read(authStateProvider);
-    if (user == null) return false;
-
     state = state.copyWith(isLoading: true, clearError: true);
-    final repo = ref.read(authRepositoryProvider);
-
-    String? finalPhotoUrl = photoUrl;
-    if (photoUrl.isNotEmpty && File(photoUrl).existsSync()) {
-      final uploadRes = await repo.uploadAvatar(
-        userId: user.id,
-        avatarFile: File(photoUrl),
-      );
-      uploadRes.fold(
-        (_) => null,
-        (uploadedUrl) => finalPhotoUrl = uploadedUrl,
-      );
-    }
-
-    final result = await repo.updateProfile(
-      userId: user.id,
+    final success = await ProfileOperationsHelper.completeProfile(
+      ref: ref,
       displayName: displayName,
-      role: role ?? user.role,
-      birthday: birthday ?? user.birthday,
-      avatarUrl: finalPhotoUrl,
+      photoUrl: photoUrl,
+      anniversaryDate: anniversaryDate,
+      birthday: birthday,
+      role: role,
+      onError: (err) => state = state.copyWith(errorMessage: err),
     );
-
-    return result.fold(
-      (failure) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: failure.message ?? 'Failed to complete profile.',
-        );
-        return false;
-      },
-      (updated) async {
-        final withAnniversary = updated.copyWith(
-          anniversaryDate: anniversaryDate ?? updated.anniversaryDate,
-          isProfileComplete: true,
-        );
-        await ref.read(authStateProvider.notifier).setUser(withAnniversary);
-        state = state.copyWith(isLoading: false);
-        return true;
-      },
-    );
+    state = state.copyWith(isLoading: false);
+    return success;
   }
 
   Future<bool> updateProfile({
@@ -342,33 +214,17 @@ class AuthController extends _$AuthController {
     DateTime? birthday,
     String? photoUrl,
   }) async {
-    final user = ref.read(authStateProvider);
-    if (user == null) return false;
-
     state = state.copyWith(isLoading: true, clearError: true);
-    final repo = ref.read(authRepositoryProvider);
-    final result = await repo.updateProfile(
-      userId: user.id,
+    final success = await ProfileOperationsHelper.updateProfile(
+      ref: ref,
       displayName: displayName,
       role: role,
       birthday: birthday,
-      avatarUrl: photoUrl,
+      photoUrl: photoUrl,
+      onError: (err) => state = state.copyWith(errorMessage: err),
     );
-
-    return result.fold(
-      (failure) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: failure.message ?? 'Failed to update profile.',
-        );
-        return false;
-      },
-      (updated) async {
-        await ref.read(authStateProvider.notifier).setUser(updated);
-        state = state.copyWith(isLoading: false);
-        return true;
-      },
-    );
+    state = state.copyWith(isLoading: false);
+    return success;
   }
 
   void clearError() {

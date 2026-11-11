@@ -1,14 +1,14 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fpdart/fpdart.dart';
-import 'package:http_parser/http_parser.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 import 'package:thae_nge_lay/core/errors/failure.dart';
 import 'package:thae_nge_lay/core/network/api_client.dart';
 import 'package:thae_nge_lay/core/network/websocket_sync_service.dart';
+import 'package:thae_nge_lay/features/chat/data/datasources/chat_memory_store.dart';
+import 'package:thae_nge_lay/features/chat/data/services/chat_audio_upload_service.dart';
 import 'package:thae_nge_lay/features/chat/domain/models/chat_message.dart';
 import 'package:thae_nge_lay/features/chat/domain/repositories/chat_repository.dart';
 
@@ -18,15 +18,20 @@ class ChatRepositoryImpl implements ChatRepository {
   final Dio _dio;
   final WebSocketSyncService _ws;
   final Uuid _uuid = const Uuid();
-
-  static final Map<String, List<ChatMessage>> _messagesStore = {};
-  static final StreamController<List<ChatMessage>> _chatStreamController =
-      StreamController<List<ChatMessage>>.broadcast();
+  final ChatMemoryStore _store;
+  final ChatAudioUploadService _uploadService;
   StreamSubscription? _wsSub;
 
-  ChatRepositoryImpl({Dio? dio, WebSocketSyncService? ws})
-    : _dio = dio ?? Dio(),
-      _ws = ws ?? WebSocketSyncService() {
+  ChatRepositoryImpl({
+    Dio? dio,
+    WebSocketSyncService? ws,
+    ChatMemoryStore? store,
+    ChatAudioUploadService? uploadService,
+  })  : _dio = dio ?? Dio(),
+        _ws = ws ?? WebSocketSyncService(),
+        _store = store ?? ChatMemoryStore(),
+        _uploadService = uploadService ??
+            ChatAudioUploadService(dio: dio ?? Dio()) {
     _initWsListener();
   }
 
@@ -36,23 +41,11 @@ class ChatRepositoryImpl implements ChatRepository {
       try {
         final raw = event.data;
         final msg = ChatMessage.fromJson(Map<String, dynamic>.from(raw));
-        _addIncomingMessage(msg);
+        _store.addMessage(msg);
       } catch (e) {
         debugPrint('[Chat WS Parse Error] $e');
       }
     });
-  }
-
-  void _addIncomingMessage(ChatMessage msg) {
-    final list = _getList(msg.coupleSpaceId);
-    if (!list.any((m) => m.id == msg.id)) {
-      list.add(msg);
-      _chatStreamController.add(list);
-    }
-  }
-
-  List<ChatMessage> _getList(String coupleSpaceId) {
-    return _messagesStore.putIfAbsent(coupleSpaceId, () => []);
   }
 
   @override
@@ -60,7 +53,6 @@ class ChatRepositoryImpl implements ChatRepository {
     String coupleSpaceId,
   ) async {
     try {
-      // 1. Fetch remote messages from Spring Boot backend
       try {
         final response = await _dio.get(
           '${ApiEndpoints.chatMessagesPath}/$coupleSpaceId',
@@ -72,20 +64,11 @@ class ChatRepositoryImpl implements ChatRepository {
                     ChatMessage.fromJson(Map<String, dynamic>.from(j as Map)),
               )
               .toList();
-
-          final local = _getList(coupleSpaceId);
-          for (final r in remoteList) {
-            if (!local.any((m) => m.id == r.id)) {
-              local.add(r);
-            }
-          }
+          _store.addRemoteMessages(coupleSpaceId, remoteList);
         }
       } catch (_) {}
 
-      final list = _getList(coupleSpaceId);
-      final sorted = List<ChatMessage>.from(list)
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      return Right(sorted);
+      return Right(_store.getSortedList(coupleSpaceId));
     } catch (e) {
       return Left(Failure.server(e.toString()));
     }
@@ -93,26 +76,10 @@ class ChatRepositoryImpl implements ChatRepository {
 
   @override
   Stream<List<ChatMessage>> streamMessages(String coupleSpaceId) async* {
-    // Initial fetch from backend
     unawaited(getMessages(coupleSpaceId));
+    yield _store.getSortedList(coupleSpaceId);
 
-    final initial = List<ChatMessage>.from(_getList(coupleSpaceId))
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    yield initial;
-
-    yield* _chatStreamController.stream.map((_) {
-      final current = List<ChatMessage>.from(_getList(coupleSpaceId))
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      return current;
-    });
-  }
-
-  void _addAndNotify(ChatMessage msg) {
-    final list = _getList(msg.coupleSpaceId);
-    if (!list.any((m) => m.id == msg.id)) {
-      list.add(msg);
-      _chatStreamController.add(list);
-    }
+    yield* _store.stream.map((_) => _store.getSortedList(coupleSpaceId));
   }
 
   @override
@@ -136,15 +103,8 @@ class ChatRepositoryImpl implements ChatRepository {
         createdAt: DateTime.now(),
       );
 
-      _addAndNotify(msg);
-
-      // Async push to Spring Boot backend
-      try {
-        await _dio.post(ApiEndpoints.chatMessagesPath, data: msg.toJson());
-      } catch (dioErr) {
-        debugPrint('[Chat Send Backend Warning] $dioErr');
-      }
-
+      _store.addMessage(msg);
+      _pushToBackend(msg);
       return Right(msg);
     } catch (e) {
       return Left(Failure.server(e.toString()));
@@ -161,48 +121,10 @@ class ChatRepositoryImpl implements ChatRepository {
     required List<double> waveforms,
   }) async {
     try {
-      String resolvedRemotePath = audioPath;
-
-      // 1. Upload local audio file via multipart form-data to Spring Boot backend
-      final localFile = File(
-        audioPath.startsWith('file://')
-            ? audioPath.replaceFirst('file://', '')
-            : audioPath,
+      final remotePath = await _uploadService.uploadAudio(
+        audioPath: audioPath,
+        coupleSpaceId: coupleSpaceId,
       );
-
-      if (localFile.existsSync()) {
-        try {
-          final fileName = localFile.path.split(Platform.pathSeparator).last;
-          final formData = FormData.fromMap({
-            'file': await MultipartFile.fromFile(
-              localFile.path,
-              filename: fileName,
-              contentType: MediaType('audio', 'm4a'),
-            ),
-            'coupleSpaceId': coupleSpaceId,
-          });
-
-          final uploadResp = await _dio.post(
-            ApiEndpoints.chatVoiceUploadPath,
-            data: formData,
-          );
-
-          if (uploadResp.statusCode == 200 && uploadResp.data is Map) {
-            final data = uploadResp.data as Map;
-            final uploadedUrl = data['audioUrl'] ?? data['audioPath'];
-            if (uploadedUrl != null && uploadedUrl.toString().isNotEmpty) {
-              resolvedRemotePath = uploadedUrl.toString();
-              debugPrint(
-                '[Chat Voice Upload] Audio uploaded to backend: $resolvedRemotePath',
-              );
-            }
-          }
-        } catch (uploadErr) {
-          debugPrint(
-            '[Chat Voice Upload Warning] Multipart upload failed: $uploadErr',
-          );
-        }
-      }
 
       final msg = ChatMessage(
         id: 'msg_${_uuid.v4().substring(0, 8)}',
@@ -210,20 +132,14 @@ class ChatRepositoryImpl implements ChatRepository {
         receiverId: receiverId,
         coupleSpaceId: coupleSpaceId,
         type: MessageType.voice,
-        audioPath: resolvedRemotePath,
+        audioPath: remotePath,
         audioDurationSeconds: durationSeconds,
         waveformSamples: waveforms,
         createdAt: DateTime.now(),
       );
 
-      _addAndNotify(msg);
-
-      try {
-        await _dio.post(ApiEndpoints.chatMessagesPath, data: msg.toJson());
-      } catch (dioErr) {
-        debugPrint('[Chat Voice Send Backend Warning] $dioErr');
-      }
-
+      _store.addMessage(msg);
+      _pushToBackend(msg);
       return Right(msg);
     } catch (e) {
       return Left(Failure.server(e.toString()));
@@ -248,18 +164,21 @@ class ChatRepositoryImpl implements ChatRepository {
         createdAt: DateTime.now(),
       );
 
-      _addAndNotify(msg);
-
-      try {
-        await _dio.post(ApiEndpoints.chatMessagesPath, data: msg.toJson());
-      } catch (dioErr) {
-        debugPrint('[Chat Gift Send Backend Warning] $dioErr');
-      }
-
+      _store.addMessage(msg);
+      _pushToBackend(msg);
       return Right(msg);
     } catch (e) {
       return Left(Failure.server(e.toString()));
     }
+  }
+
+  void _pushToBackend(ChatMessage msg) {
+    _dio.post(ApiEndpoints.chatMessagesPath, data: msg.toJson()).catchError(
+      (dioErr) {
+        debugPrint('[Chat Send Backend Warning] $dioErr');
+        return Response(requestOptions: RequestOptions());
+      },
+    );
   }
 
   @override
@@ -278,9 +197,10 @@ class ChatRepositoryImpl implements ChatRepository {
       }
     } catch (_) {}
 
-    final localCount = _getList(
-      coupleSpaceId,
-    ).where((m) => m.receiverId == receiverId && !m.isRead).length;
+    final localCount = _store
+        .getList(coupleSpaceId)
+        .where((m) => m.receiverId == receiverId && !m.isRead)
+        .length;
     return Right(localCount);
   }
 
@@ -290,17 +210,10 @@ class ChatRepositoryImpl implements ChatRepository {
     required String receiverId,
   }) async {
     try {
-      final list = _getList(coupleSpaceId);
-      int marked = 0;
-      for (int i = 0; i < list.length; i++) {
-        if (list[i].receiverId == receiverId && !list[i].isRead) {
-          list[i] = list[i].copyWith(isRead: true);
-          marked++;
-        }
-      }
-      if (marked > 0) {
-        _chatStreamController.add(list);
-      }
+      final marked = _store.markMessagesAsRead(
+        coupleSpaceId: coupleSpaceId,
+        receiverId: receiverId,
+      );
 
       try {
         await _dio.post(
