@@ -32,6 +32,7 @@ public class PairingService {
     private final UserInviteCodeRepository userInviteCodeRepository;
     private final UserRepository userRepository;
     private final SyncWebSocketHandler syncWebSocketHandler;
+    private final FirebaseMessagingService firebaseMessagingService;
 
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -177,6 +178,20 @@ public class PairingService {
         // 7. Instant real-time notification over WebSocket to both devices
         syncWebSocketHandler.sendToUser(targetUserId, "COUPLE_PAIRED", response);
         syncWebSocketHandler.sendToUser(currentUserId, "COUPLE_PAIRED", response);
+
+        // 8. Send High-Priority FCM Push Notifications for Pair Connection
+        userRepository.findById(targetUserId).ifPresent(targetUser -> {
+            String partnerName = userRepository.findById(currentUserId)
+                    .map(UserEntity::getDisplayName)
+                    .orElse("Your Partner");
+            firebaseMessagingService.sendCouplePairedNotification(targetUser, partnerName, spaceId);
+        });
+        userRepository.findById(currentUserId).ifPresent(currentUser -> {
+            String partnerName = userRepository.findById(targetUserId)
+                    .map(UserEntity::getDisplayName)
+                    .orElse("Your Partner");
+            firebaseMessagingService.sendCouplePairedNotification(currentUser, partnerName, spaceId);
+        });
 
         log.info("Successfully paired user: {} with partner: {} using code: {} in couple space: {}",
                 currentUserId, targetUserId, normalizedCode, spaceId);

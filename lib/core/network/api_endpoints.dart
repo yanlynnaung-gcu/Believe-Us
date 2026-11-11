@@ -107,4 +107,7 @@ class ApiEndpoints {
 
   // Shared Couple Milestones endpoint
   static const String milestonesPath = '/api/v1/milestones';
+
+  // FCM Device Token Registration endpoint
+  static String userFcmTokenPath(String userId) => '/api/v1/users/$userId/fcm-token';
 }

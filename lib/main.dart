@@ -1,6 +1,8 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thae_nge_lay/core/notifications/notification_manager.dart';
 import 'package:thae_nge_lay/core/router/app_router.dart';
 import 'package:thae_nge_lay/core/storage/local_storage_service.dart';
 import 'package:thae_nge_lay/core/theme/app_theme.dart';
@@ -9,6 +11,14 @@ import 'package:thae_nge_lay/features/auth/presentation/listeners/single_device_
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ScreenUtil.ensureScreenSize();
+
+  // Initialize Native Heads-Up Push Notifications & FCM Engine
+  try {
+    await NotificationManager.instance.init();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  } catch (e) {
+    debugPrint('[Main] FCM background message registration note: $e');
+  }
 
   final localStorage = LocalStorageService();
   await localStorage.init();
@@ -35,6 +45,13 @@ class ThaeThaeApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(singleDeviceSecurityListenerProvider);
     final router = ref.watch(appRouterProvider);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final pendingRoute = NotificationManager.instance.consumePendingRoute();
+      if (pendingRoute != null) {
+        NotificationManager.instance.navigateToRoute(pendingRoute);
+      }
+    });
 
     return MaterialApp.router(
       title: 'Thae Thae',

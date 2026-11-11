@@ -25,6 +25,7 @@ public class UserProfileDto {
     private String lastAddress;
     private Integer batteryLevel;
     private Boolean isOnline;
+    private String fcmToken;
     private LocalDateTime createdAt;
 
     public static UserProfileDto fromEntity(UserEntity entity) {
@@ -43,6 +44,7 @@ public class UserProfileDto {
                 .lastAddress(entity.getLastAddress())
                 .batteryLevel(entity.getBatteryLevel())
                 .isOnline(entity.getIsOnline())
+                .fcmToken(entity.getFcmToken())
                 .createdAt(entity.getCreatedAt())
                 .build();
     }

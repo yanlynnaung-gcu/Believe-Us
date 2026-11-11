@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:thae_nge_lay/core/notifications/notification_manager.dart';
+import 'package:thae_nge_lay/core/router/route_names.dart';
 import 'package:uuid/uuid.dart';
 import 'package:thae_nge_lay/features/notifications/domain/models/couple_notification.dart';
 
@@ -17,15 +20,53 @@ class FcmNotificationService {
   List<CoupleNotification> get history => List.unmodifiable(_history);
 
   String? _fcmToken;
-  String get fcmToken => _fcmToken ?? 'fcm_token_${_uuid.v4().substring(0, 12)}';
+  String get fcmToken => _fcmToken ?? NotificationManager.instance.fcmToken;
 
   Future<void> init() async {
-    _fcmToken = 'fcm_believeus_${_uuid.v4().substring(0, 16)}';
+    await NotificationManager.instance.init();
+    _fcmToken = NotificationManager.instance.fcmToken;
+  }
+
+  Future<void> syncTokenWithBackend({
+    required String userId,
+    required Dio dio,
+  }) async {
+    await NotificationManager.instance.syncTokenWithBackend(
+      userId: userId,
+      dio: dio,
+    );
   }
 
   void _dispatch(CoupleNotification notification) {
     _history.insert(0, notification);
     _notificationStream.add(notification);
+
+    // Display native heads-up notification banner on device
+    String targetRoute = AppRoutes.home;
+    switch (notification.type) {
+      case NotificationType.textMessage:
+      case NotificationType.voiceMessage:
+      case NotificationType.giftReceived:
+        targetRoute = AppRoutes.chat;
+        break;
+      case NotificationType.locationArrival:
+        targetRoute = AppRoutes.locationDetails;
+        break;
+      case NotificationType.anniversaryReminder:
+        targetRoute = AppRoutes.anniversary;
+        break;
+    }
+
+    NotificationManager.instance.showHeadsUpBanner(
+      id: notification.id.hashCode,
+      title: notification.title,
+      body: notification.body,
+      data: {
+        'route': targetRoute,
+        'type': notification.type.name,
+        'id': notification.id,
+      },
+    );
   }
 
   // Event 1: New text message

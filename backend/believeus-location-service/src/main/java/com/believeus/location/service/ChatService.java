@@ -1,8 +1,10 @@
 package com.believeus.location.service;
 
 import com.believeus.location.entity.ChatMessageEntity;
+import com.believeus.location.entity.UserEntity;
 import com.believeus.location.model.dto.ChatMessageDto;
 import com.believeus.location.repository.ChatMessageRepository;
+import com.believeus.location.repository.UserRepository;
 import com.believeus.location.websocket.SyncWebSocketHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +23,9 @@ import java.util.UUID;
 public class ChatService {
 
     private final ChatMessageRepository chatMessageRepository;
+    private final UserRepository userRepository;
     private final SyncWebSocketHandler syncWebSocketHandler;
+    private final FirebaseMessagingService firebaseMessagingService;
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
@@ -98,6 +102,27 @@ public class ChatService {
         );
         syncWebSocketHandler.sendToUser(dto.getReceiverId(), "CHAT_UNREAD_COUNT", unreadPayload);
         syncWebSocketHandler.broadcastToCoupleSpace(dto.getCoupleSpaceId(), "CHAT_UNREAD_COUNT", unreadPayload);
+
+        // Send High-Priority FCM Push Notification to partner device
+        String targetReceiverId = dto.getReceiverId();
+        if (targetReceiverId == null || targetReceiverId.isBlank()) {
+            targetReceiverId = userRepository.findById(dto.getSenderId())
+                    .map(UserEntity::getPartnerId)
+                    .orElse(null);
+        }
+        if (targetReceiverId != null && !targetReceiverId.isBlank()) {
+            userRepository.findById(targetReceiverId).ifPresent(recipient -> {
+                String senderName = userRepository.findById(dto.getSenderId())
+                        .map(UserEntity::getDisplayName)
+                        .orElse("My Love");
+                firebaseMessagingService.sendChatMessageNotification(
+                        recipient,
+                        senderName,
+                        dto.getText(),
+                        dto.getType()
+                );
+            });
+        }
 
         log.info("[Chat Broadcast] Type: '{}', Space: '{}', Sender: '{}', Unread: {}",
                 result.getType(), result.getCoupleSpaceId(), result.getSenderId(), unreadCount);

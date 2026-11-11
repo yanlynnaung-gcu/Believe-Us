@@ -396,6 +396,10 @@ public class AuthService {
             user.setAvatarUrl((String) updates.get("avatarUrl"));
         }
 
+        if (updates.containsKey("fcmToken")) {
+            user.setFcmToken((String) updates.get("fcmToken"));
+        }
+
         UserEntity saved = userRepository.save(user);
         UserProfileDto dto = UserProfileDto.fromEntity(saved);
 
@@ -405,5 +409,15 @@ public class AuthService {
         }
 
         return dto;
+    }
+
+    @Transactional
+    public void updateFcmToken(String userId, String fcmToken) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        user.setFcmToken(fcmToken);
+        userRepository.save(user);
+        log.info("[FCM Token Registered] User '{}' updated device token (length: {})",
+                userId, fcmToken != null ? fcmToken.length() : 0);
     }
 }

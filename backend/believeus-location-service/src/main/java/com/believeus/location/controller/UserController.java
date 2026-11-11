@@ -97,6 +97,30 @@ public class UserController {
         return ResponseEntity.ok(authService.updateProfile(userId, updates));
     }
 
+    @PutMapping("/{userId}/fcm-token")
+    public ResponseEntity<Map<String, Object>> updateFcmToken(
+            @PathVariable String userId,
+            @RequestBody Map<String, String> body) {
+        validateUserOwnership(userId);
+        String token = body.get("fcmToken");
+        if (token == null || token.isBlank()) {
+            token = body.get("token");
+        }
+        authService.updateFcmToken(userId, token);
+        return ResponseEntity.ok(Map.of(
+                "status", "SUCCESS",
+                "message", "FCM device registration token registered successfully",
+                "userId", userId
+        ));
+    }
+
+    @PostMapping("/{userId}/fcm-token")
+    public ResponseEntity<Map<String, Object>> registerFcmToken(
+            @PathVariable String userId,
+            @RequestBody Map<String, String> body) {
+        return updateFcmToken(userId, body);
+    }
+
     private void validateUserOwnership(String userId) {
         String tokenUserId = SecurityContextUtil.getCurrentUserId();
         if (tokenUserId != null && !tokenUserId.equals(userId)) {

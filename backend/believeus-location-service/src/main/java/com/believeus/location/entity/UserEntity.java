@@ -61,6 +61,9 @@ public class UserEntity {
     @Column(length = 128)
     private String currentDeviceName;
 
+    @Column(length = 500)
+    private String fcmToken;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 

@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:thae_nge_lay/core/network/api_client.dart';
 import 'package:thae_nge_lay/core/storage/local_storage_service.dart';
 import 'package:thae_nge_lay/features/auth/domain/models/user_profile.dart';
+import 'package:thae_nge_lay/features/notifications/data/services/fcm_notification_service.dart';
 
 part 'auth_state_notifier.g.dart';
 
@@ -14,7 +16,17 @@ class AuthStateNotifier extends _$AuthStateNotifier {
     if (jsonStr != null && jsonStr.isNotEmpty) {
       try {
         final map = jsonDecode(jsonStr) as Map<String, dynamic>;
-        return UserProfile.fromJson(map);
+        final user = UserProfile.fromJson(map);
+        // Automatically sync device FCM registration token on app restoration
+        Future.microtask(() {
+          try {
+            ref.read(fcmNotificationServiceProvider).syncTokenWithBackend(
+                  userId: user.id,
+                  dio: ref.read(dioClientProvider),
+                );
+          } catch (_) {}
+        });
+        return user;
       } catch (_) {}
     }
     return null;
@@ -26,6 +38,12 @@ class AuthStateNotifier extends _$AuthStateNotifier {
     if (user != null) {
       await storage.setActiveUserId(user.id);
       await storage.setUserProfileJson(jsonEncode(user.toJson()));
+      try {
+        ref.read(fcmNotificationServiceProvider).syncTokenWithBackend(
+              userId: user.id,
+              dio: ref.read(dioClientProvider),
+            );
+      } catch (_) {}
     } else {
       await storage.setActiveUserId(null);
       await storage.setUserProfileJson(null);

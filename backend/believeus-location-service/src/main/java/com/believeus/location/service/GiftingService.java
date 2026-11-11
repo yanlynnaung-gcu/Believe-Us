@@ -1,10 +1,12 @@
 package com.believeus.location.service;
 
 import com.believeus.location.entity.GiftTransactionEntity;
+import com.believeus.location.entity.UserEntity;
 import com.believeus.location.model.dto.ChatMessageDto;
 import com.believeus.location.model.dto.GiftingRequest;
 import com.believeus.location.model.dto.GiftingResponse;
 import com.believeus.location.repository.GiftTransactionRepository;
+import com.believeus.location.repository.UserRepository;
 import com.believeus.location.websocket.SyncWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +23,9 @@ import java.util.*;
 public class GiftingService {
 
     private final ChatService chatService;
+    private final UserRepository userRepository;
     private final SyncWebSocketHandler syncWebSocketHandler;
+    private final FirebaseMessagingService firebaseMessagingService;
     private final GiftTransactionRepository giftTransactionRepository;
 
     public List<Map<String, Object>> getAvailablePackages() {
@@ -101,6 +105,20 @@ public class GiftingService {
         // Broadcast GIFT_RECEIVED event via WebSocket to receiver and couple space
         syncWebSocketHandler.sendToUser(request.getReceiverId(), "GIFT_RECEIVED", response);
         syncWebSocketHandler.broadcastToCoupleSpace(request.getCoupleSpaceId(), "GIFT_RECEIVED", response);
+
+        // Send High-Priority FCM Push Notification for Gift Arrival
+        userRepository.findById(request.getReceiverId()).ifPresent(recipient -> {
+            String senderName = userRepository.findById(request.getSenderId())
+                    .map(UserEntity::getDisplayName)
+                    .orElse("My Love");
+            firebaseMessagingService.sendGiftReceivedNotification(
+                    recipient,
+                    senderName,
+                    request.getProvider() != null ? request.getProvider() : "KBZPay",
+                    formattedAmount,
+                    request.getPackageTitle()
+            );
+        });
 
         log.info("[Gift Processed] {} MMK sent via {} to {}", request.getAmountMmK(), request.getProvider(), request.getReceiverId());
         return response;
