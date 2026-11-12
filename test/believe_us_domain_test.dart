@@ -112,6 +112,18 @@ class FakePairingRemoteDataSource implements PairingRemoteDataSource {
   }
 
   @override
+  Future<CoupleSummary> updateAnniversaryDate({
+    required String coupleSpaceId,
+    required DateTime anniversaryDate,
+  }) async {
+    return CoupleSummary(
+      coupleSpaceId: coupleSpaceId,
+      anniversaryDate: anniversaryDate,
+      daysTogether: 1,
+    );
+  }
+
+  @override
   Future<void> unpair(String coupleSpaceId) async {
     final space = _coupleSpaces.remove(coupleSpaceId);
     if (space != null) {

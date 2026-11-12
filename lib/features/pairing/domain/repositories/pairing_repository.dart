@@ -16,5 +16,9 @@ abstract interface class PairingRepository {
     required String coupleSpaceId,
     String? userId,
   });
+  Future<Either<Failure, CoupleSummary>> updateAnniversaryDate({
+    required String coupleSpaceId,
+    required DateTime anniversaryDate,
+  });
   Future<Either<Failure, void>> unpair(String coupleSpaceId);
 }

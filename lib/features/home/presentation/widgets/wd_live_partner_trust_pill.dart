@@ -30,9 +30,14 @@ class LivePartnerTrustPill extends ConsumerWidget {
           // Small Partner Avatar with live green pulse
           Stack(
             children: [
-              CircleAvatar(
-                radius: 20.r,
-                backgroundImage: getCustomImageProvider(partnerAvatarPath),
+              ClipOval(
+                child: SafeCoupleImage(
+                  imagePath: partnerAvatarPath,
+                  width: 40.r,
+                  height: 40.r,
+                  fit: BoxFit.cover,
+                  fallbackUrl: kDefaultAvatarGirlfriendUrl,
+                ),
               ),
               Positioned(
                 bottom: 0,

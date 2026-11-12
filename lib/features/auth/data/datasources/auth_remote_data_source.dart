@@ -56,6 +56,7 @@ abstract interface class AuthRemoteDataSource {
     String? role,
     DateTime? birthday,
     String? avatarUrl,
+    DateTime? anniversaryDate,
   });
 
   Future<void> signOut();

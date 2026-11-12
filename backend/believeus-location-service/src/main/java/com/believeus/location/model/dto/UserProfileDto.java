@@ -26,6 +26,7 @@ public class UserProfileDto {
     private Integer batteryLevel;
     private Boolean isOnline;
     private String fcmToken;
+    private LocalDateTime anniversaryDate;
     private LocalDateTime createdAt;
 
     public static UserProfileDto fromEntity(UserEntity entity) {
@@ -45,6 +46,7 @@ public class UserProfileDto {
                 .batteryLevel(entity.getBatteryLevel())
                 .isOnline(entity.getIsOnline())
                 .fcmToken(entity.getFcmToken())
+                .anniversaryDate(entity.getAnniversaryDate())
                 .createdAt(entity.getCreatedAt())
                 .build();
     }

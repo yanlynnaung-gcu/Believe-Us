@@ -1,7 +1,11 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:thae_nge_lay/core/network/websocket_sync_service.dart';
+import 'package:thae_nge_lay/core/storage/local_storage_service.dart';
+import 'package:thae_nge_lay/core/utils/image_provider_helper.dart';
+import 'package:thae_nge_lay/features/anniversary/presentation/controllers/anniversary_notifier.dart';
 import 'package:thae_nge_lay/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:thae_nge_lay/features/auth/presentation/controllers/auth_state_notifier.dart';
 import 'package:thae_nge_lay/features/pairing/data/repositories/pairing_repository_impl.dart';
@@ -49,53 +53,82 @@ class CoupleMediaState {
 class CoupleMediaController extends _$CoupleMediaController {
   StreamSubscription? _wsProfileSub;
   StreamSubscription? _wsCoverSub;
+  StreamSubscription? _wsAnniversarySub;
+  StreamSubscription? _wsPairedSub;
 
   @override
   CoupleMediaState build() {
     ref.onDispose(() {
       _wsProfileSub?.cancel();
       _wsCoverSub?.cancel();
+      _wsAnniversarySub?.cancel();
+      _wsPairedSub?.cancel();
     });
 
-    final now = DateTime.now();
-    final defaultBirthday = now.add(const Duration(days: 14));
-
+    final storage = ref.watch(localStorageServiceProvider);
     final user = ref.watch(authStateProvider);
 
+    final defaultPartnerRole =
+        (user?.role.toUpperCase() == 'GIRLFRIEND') ? 'BOYFRIEND' : 'GIRLFRIEND';
+    final fallbackPartnerAvatar = defaultPartnerRole == 'BOYFRIEND'
+        ? kDefaultAvatarBoyfriendUrl
+        : kDefaultAvatarGirlfriendUrl;
+    final fallbackUserAvatar = (user?.role.toUpperCase() == 'GIRLFRIEND')
+        ? kDefaultAvatarGirlfriendUrl
+        : kDefaultAvatarBoyfriendUrl;
+
+    // 1. Initial User Avatar (user profile > storage cache > fallback)
     final initialUserAvatar = (user?.photoUrl != null && user!.photoUrl!.isNotEmpty)
         ? user.photoUrl!
-        : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300';
+        : fallbackUserAvatar;
 
+    // 2. Cover Photo (storage cache > fallback)
+    final cachedCover = storage.coverPhotoPath;
+    final initialCover = (cachedCover != null && cachedCover.isNotEmpty)
+        ? cachedCover
+        : kDefaultFallbackImageUrl;
+
+    // 3. Partner Avatar (storage cache > fallback)
+    final cachedPartnerAvatar = storage.partnerAvatarPath;
+    final initialPartnerAvatar = (cachedPartnerAvatar != null && cachedPartnerAvatar.isNotEmpty)
+        ? cachedPartnerAvatar
+        : fallbackPartnerAvatar;
+
+    // 4. Partner Name & Birthday
+    final cachedPartnerName = storage.partnerName;
     final defaultPartnerName = (user?.role.toUpperCase() == 'GIRLFRIEND')
         ? 'Ko Ko'
         : 'Thae Thae';
+    final initialPartnerName = (cachedPartnerName != null && cachedPartnerName.isNotEmpty)
+        ? cachedPartnerName
+        : defaultPartnerName;
 
-    ref.onDispose(() {
-      _wsProfileSub?.cancel();
-      _wsCoverSub?.cancel();
-    });
+    final cachedPartnerBday = storage.partnerBirthday;
+    final initialPartnerBday =
+        cachedPartnerBday ?? DateTime.now().add(const Duration(days: 14));
 
     _setupWebSocketListeners();
     Future.microtask(() => syncCoupleSummary());
 
     return CoupleMediaState(
-      coverPhotoPath:
-          'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=1200',
+      coverPhotoPath: initialCover,
       userAvatarPath: initialUserAvatar,
-      partnerAvatarPath:
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300',
-      partnerName: defaultPartnerName,
-      partnerBirthday: defaultBirthday,
+      partnerAvatarPath: initialPartnerAvatar,
+      partnerName: initialPartnerName,
+      partnerBirthday: initialPartnerBday,
     );
   }
 
   void _setupWebSocketListeners() {
     _wsProfileSub?.cancel();
     _wsCoverSub?.cancel();
+    _wsAnniversarySub?.cancel();
+    _wsPairedSub?.cancel();
 
     final ws = ref.read(webSocketSyncServiceProvider);
+    final storage = ref.read(localStorageServiceProvider);
 
-    _wsProfileSub = ws.onEvent('PROFILE_UPDATED').listen((e) {
+    _wsProfileSub = ws.onEvent('PROFILE_UPDATED').listen((e) async {
       final data = e.data;
       final currentUser = ref.read(authStateProvider);
       if (currentUser == null) return;
@@ -105,36 +138,67 @@ class CoupleMediaController extends _$CoupleMediaController {
 
       if (eventUserId != null && eventUserId == partnerId) {
         final displayName = data['displayName']?.toString();
-        final avatarUrl = data['avatarUrl']?.toString() ?? data['photoUrl']?.toString();
+        final avatarUrl =
+            data['avatarUrl']?.toString() ?? data['photoUrl']?.toString();
         final birthdayStr = data['birthday']?.toString();
         DateTime? birthday;
         if (birthdayStr != null) {
           birthday = DateTime.tryParse(birthdayStr);
         }
 
+        if (displayName != null && displayName.isNotEmpty) {
+          await storage.setPartnerName(displayName);
+        }
+        if (avatarUrl != null && avatarUrl.isNotEmpty) {
+          await storage.setPartnerAvatarPath(avatarUrl);
+        }
+        if (birthday != null) {
+          await storage.setPartnerBirthday(birthday);
+        }
+
         state = state.copyWith(
-          partnerName: (displayName != null && displayName.isNotEmpty) ? displayName : state.partnerName,
-          partnerAvatarPath: (avatarUrl != null && avatarUrl.isNotEmpty) ? avatarUrl : state.partnerAvatarPath,
+          partnerName: (displayName != null && displayName.isNotEmpty)
+              ? displayName
+              : state.partnerName,
+          partnerAvatarPath: (avatarUrl != null && avatarUrl.isNotEmpty)
+              ? avatarUrl
+              : state.partnerAvatarPath,
           partnerBirthday: birthday ?? state.partnerBirthday,
         );
       } else if (eventUserId != null && eventUserId == currentUser.id) {
-        final avatarUrl = data['avatarUrl']?.toString() ?? data['photoUrl']?.toString();
+        final avatarUrl =
+            data['avatarUrl']?.toString() ?? data['photoUrl']?.toString();
         if (avatarUrl != null && avatarUrl.isNotEmpty) {
           state = state.copyWith(userAvatarPath: avatarUrl);
+          await ref.read(authStateProvider.notifier).updateProfile(
+                displayName: currentUser.displayName,
+                photoUrl: avatarUrl,
+              );
         }
       }
 
       final coverPhotoUrl = data['coverPhotoUrl']?.toString();
       if (coverPhotoUrl != null && coverPhotoUrl.isNotEmpty) {
+        await storage.setCoverPhotoPath(coverPhotoUrl);
         state = state.copyWith(coverPhotoPath: coverPhotoUrl);
       }
     });
 
-    _wsCoverSub = ws.onEvent('COVER_PHOTO_UPDATED').listen((e) {
+    _wsCoverSub = ws.onEvent('COVER_PHOTO_UPDATED').listen((e) async {
       final coverPhotoUrl = e.data['coverPhotoUrl']?.toString();
       if (coverPhotoUrl != null && coverPhotoUrl.isNotEmpty) {
+        await storage.setCoverPhotoPath(coverPhotoUrl);
         state = state.copyWith(coverPhotoPath: coverPhotoUrl);
       }
+    });
+
+    _wsAnniversarySub = ws.onEvent('ANNIVERSARY_UPDATED').listen((e) {
+      ref.invalidate(anniversaryProvider);
+    });
+
+    _wsPairedSub = ws.onEvent('COUPLE_PAIRED').listen((e) {
+      syncCoupleSummary();
+      ref.invalidate(anniversaryProvider);
     });
   }
 
@@ -151,7 +215,10 @@ class CoupleMediaController extends _$CoupleMediaController {
     );
 
     result.fold(
-      (_) => state = state.copyWith(isSyncing: false),
+      (failure) {
+        debugPrint('[CoupleMediaController] Failed to sync couple summary: ${failure.message}');
+        state = state.copyWith(isSyncing: false);
+      },
       (summary) {
         initFromCoupleSummary(summary);
       },
@@ -159,34 +226,57 @@ class CoupleMediaController extends _$CoupleMediaController {
   }
 
   void initFromCoupleSummary(CoupleSummary summary) {
+    final storage = ref.read(localStorageServiceProvider);
     var newState = state.copyWith(isSyncing: false);
 
     if (summary.coverPhotoUrl != null && summary.coverPhotoUrl!.isNotEmpty) {
+      storage.setCoverPhotoPath(summary.coverPhotoUrl!);
       newState = newState.copyWith(coverPhotoPath: summary.coverPhotoUrl!);
     }
 
-    if (summary.myProfile?.photoUrl != null && summary.myProfile!.photoUrl!.isNotEmpty) {
+    if (summary.myProfile?.photoUrl != null &&
+        summary.myProfile!.photoUrl!.isNotEmpty) {
       newState = newState.copyWith(userAvatarPath: summary.myProfile!.photoUrl!);
     }
 
     if (summary.partnerProfile != null) {
       final p = summary.partnerProfile!;
       if (p.displayName.isNotEmpty) {
+        storage.setPartnerName(p.displayName);
         newState = newState.copyWith(partnerName: p.displayName);
       }
       if (p.photoUrl != null && p.photoUrl!.isNotEmpty) {
+        storage.setPartnerAvatarPath(p.photoUrl!);
         newState = newState.copyWith(partnerAvatarPath: p.photoUrl!);
       }
       if (p.birthday != null) {
+        storage.setPartnerBirthday(p.birthday!);
         newState = newState.copyWith(partnerBirthday: p.birthday!);
       }
+    }
+
+    // Sync official start date and days together across client
+    final officialStart = summary.officialStartDate;
+    if (officialStart != null) {
+      storage.setAnniversaryDate(officialStart);
+      storage.setDaysTogether(summary.daysTogether);
+
+      final currentUser = ref.read(authStateProvider);
+      if (currentUser != null && currentUser.anniversaryDate != officialStart) {
+        ref.read(authStateProvider.notifier).setUser(
+              currentUser.copyWith(anniversaryDate: officialStart),
+            );
+      }
+      ref.read(anniversaryProvider.notifier).syncFromSummary(summary);
     }
 
     state = newState;
   }
 
   Future<void> updateCoverPhoto(String path) async {
+    final storage = ref.read(localStorageServiceProvider);
     state = state.copyWith(coverPhotoPath: path);
+    await storage.setCoverPhotoPath(path);
 
     final user = ref.read(authStateProvider);
     if (user?.coupleSpaceId != null && File(path).existsSync()) {
@@ -197,10 +287,15 @@ class CoupleMediaController extends _$CoupleMediaController {
           coverFile: File(path),
         );
         result.fold(
-          (_) => null,
-          (uploadedUrl) => state = state.copyWith(coverPhotoPath: uploadedUrl),
+          (err) => debugPrint('[CoupleMediaController] Cover upload failed: $err'),
+          (uploadedUrl) async {
+            await storage.setCoverPhotoPath(uploadedUrl);
+            state = state.copyWith(coverPhotoPath: uploadedUrl);
+          },
         );
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[CoupleMediaController] Exception uploading cover: $e');
+      }
     }
   }
 
@@ -216,7 +311,7 @@ class CoupleMediaController extends _$CoupleMediaController {
           avatarFile: File(path),
         );
         result.fold(
-          (_) => null,
+          (err) => debugPrint('[CoupleMediaController] Avatar upload failed: $err'),
           (uploadedUrl) async {
             state = state.copyWith(userAvatarPath: uploadedUrl);
             await ref.read(authStateProvider.notifier).updateProfile(
@@ -225,19 +320,27 @@ class CoupleMediaController extends _$CoupleMediaController {
                 );
           },
         );
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[CoupleMediaController] Exception uploading avatar: $e');
+      }
     }
   }
 
-  void updatePartnerAvatar(String path) {
+  Future<void> updatePartnerAvatar(String path) async {
+    final storage = ref.read(localStorageServiceProvider);
     state = state.copyWith(partnerAvatarPath: path);
+    await storage.setPartnerAvatarPath(path);
   }
 
-  void updatePartnerBirthday(DateTime birthday) {
+  Future<void> updatePartnerBirthday(DateTime birthday) async {
+    final storage = ref.read(localStorageServiceProvider);
+    await storage.setPartnerBirthday(birthday);
     state = state.copyWith(partnerBirthday: birthday);
   }
 
-  void updatePartnerName(String name) {
+  Future<void> updatePartnerName(String name) async {
+    final storage = ref.read(localStorageServiceProvider);
+    await storage.setPartnerName(name);
     state = state.copyWith(partnerName: name);
   }
 }

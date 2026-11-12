@@ -42,7 +42,7 @@ final class EmergencyControllerProvider
 }
 
 String _$emergencyControllerHash() =>
-    r'b9643e206b5ce6a1f7a0bd00d5e7ef7ef7ac1a18';
+    r'3c6ab0a8ca3b024649a76bb64e771e1daa839bec';
 
 abstract class _$EmergencyController extends $Notifier<EmergencyState> {
   EmergencyState build();

@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
@@ -76,5 +77,38 @@ public class CoupleController {
         String effectiveUserId = tokenUserId != null ? tokenUserId : userId;
 
         return ResponseEntity.ok(pairingService.getCoupleSummary(coupleSpaceId, effectiveUserId));
+    }
+
+    @PutMapping("/{coupleSpaceId}/anniversary")
+    public ResponseEntity<CoupleSummaryResponse> updateAnniversary(
+            @PathVariable String coupleSpaceId,
+            @RequestBody Map<String, Object> body) {
+
+        SecurityContextUtil.validateCoupleSpaceAccess(coupleSpaceId);
+
+        String dateStr = (String) body.get("anniversaryDate");
+        if (dateStr == null) {
+            dateStr = (String) body.get("startDate");
+        }
+        if (dateStr == null || dateStr.isBlank()) {
+            throw new IllegalArgumentException("Anniversary date or start date is required.");
+        }
+
+        LocalDateTime parsedDate;
+        try {
+            if (dateStr.endsWith("Z")) {
+                parsedDate = java.time.Instant.parse(dateStr).atZone(java.time.ZoneOffset.UTC).toLocalDateTime();
+            } else if (dateStr.contains("T")) {
+                parsedDate = LocalDateTime.parse(dateStr.substring(0, Math.min(dateStr.length(), 19)));
+            } else {
+                parsedDate = java.time.LocalDate.parse(dateStr).atStartOfDay();
+            }
+        } catch (Exception e) {
+            log.error("Failed to parse anniversary date: {}", dateStr, e);
+            throw new IllegalArgumentException("Invalid date format: " + dateStr);
+        }
+
+        CoupleSummaryResponse resp = pairingService.updateAnniversaryDate(coupleSpaceId, parsedDate);
+        return ResponseEntity.ok(resp);
     }
 }

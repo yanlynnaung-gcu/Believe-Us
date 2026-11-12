@@ -56,6 +56,7 @@ abstract interface class AuthRepository {
     String? role,
     DateTime? birthday,
     String? avatarUrl,
+    DateTime? anniversaryDate,
   });
 
   Future<Either<Failure, void>> signOut();

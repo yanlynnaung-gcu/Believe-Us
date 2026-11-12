@@ -36,11 +36,14 @@ class PartnerLiveStatusBar extends ConsumerWidget {
           // Partner Avatar with pulsing live dot
           Stack(
             children: [
-              CircleAvatar(
-                radius: 20.r,
-                backgroundColor: BelieveColors.primarySoft,
-                backgroundImage:
-                    getCustomImageProvider(media.partnerAvatarPath),
+              ClipOval(
+                child: SafeCoupleImage(
+                  imagePath: media.partnerAvatarPath,
+                  width: 40.r,
+                  height: 40.r,
+                  fit: BoxFit.cover,
+                  fallbackUrl: kDefaultAvatarGirlfriendUrl,
+                ),
               ),
               Positioned(
                 bottom: 0,

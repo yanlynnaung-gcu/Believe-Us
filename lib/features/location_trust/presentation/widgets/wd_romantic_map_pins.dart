@@ -66,9 +66,12 @@ class WdRomanticHeartPinsOverlay extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: CircleAvatar(
-                          backgroundImage:
-                              getCustomImageProvider(partnerAvatarPath),
+                        child: ClipOval(
+                          child: SafeCoupleImage(
+                            imagePath: partnerAvatarPath,
+                            fit: BoxFit.cover,
+                            fallbackUrl: kDefaultAvatarGirlfriendUrl,
+                          ),
                         ),
                       ),
                     ],
@@ -121,9 +124,12 @@ class WdRomanticHeartPinsOverlay extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: CircleAvatar(
-                      backgroundImage:
-                          getCustomImageProvider(userAvatarPath),
+                    child: ClipOval(
+                      child: SafeCoupleImage(
+                        imagePath: userAvatarPath,
+                        fit: BoxFit.cover,
+                        fallbackUrl: kDefaultAvatarBoyfriendUrl,
+                      ),
                     ),
                   ),
                   SizedBox(height: 2.h),

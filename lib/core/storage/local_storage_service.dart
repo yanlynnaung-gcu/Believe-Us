@@ -14,6 +14,12 @@ class LocalStorageService {
   static const String _keyLocationPermissionGranted = 'location_permission_granted';
   static const String _keyDeviceId = 'unique_device_id';
   static const String _keyDeviceName = 'device_display_name';
+  static const String _keyCoverPhotoPath = 'couple_cover_photo_path';
+  static const String _keyPartnerAvatarPath = 'couple_partner_avatar_path';
+  static const String _keyPartnerName = 'couple_partner_name';
+  static const String _keyPartnerBirthday = 'couple_partner_birthday';
+  static const String _keyAnniversaryDate = 'couple_anniversary_date';
+  static const String _keyDaysTogether = 'couple_days_together';
 
   late Box _box;
 
@@ -93,6 +99,66 @@ class LocalStorageService {
     } catch (_) {}
     _box.put(_keyDeviceName, name);
     return name;
+  }
+
+  String? get coverPhotoPath => _box.get(_keyCoverPhotoPath) as String?;
+  Future<void> setCoverPhotoPath(String? path) async {
+    if (path == null) {
+      await _box.delete(_keyCoverPhotoPath);
+    } else {
+      await _box.put(_keyCoverPhotoPath, path);
+    }
+  }
+
+  String? get partnerAvatarPath => _box.get(_keyPartnerAvatarPath) as String?;
+  Future<void> setPartnerAvatarPath(String? path) async {
+    if (path == null) {
+      await _box.delete(_keyPartnerAvatarPath);
+    } else {
+      await _box.put(_keyPartnerAvatarPath, path);
+    }
+  }
+
+  String? get partnerName => _box.get(_keyPartnerName) as String?;
+  Future<void> setPartnerName(String? name) async {
+    if (name == null) {
+      await _box.delete(_keyPartnerName);
+    } else {
+      await _box.put(_keyPartnerName, name);
+    }
+  }
+
+  DateTime? get partnerBirthday {
+    final str = _box.get(_keyPartnerBirthday) as String?;
+    return str != null ? DateTime.tryParse(str) : null;
+  }
+  Future<void> setPartnerBirthday(DateTime? date) async {
+    if (date == null) {
+      await _box.delete(_keyPartnerBirthday);
+    } else {
+      await _box.put(_keyPartnerBirthday, date.toIso8601String());
+    }
+  }
+
+  DateTime? get anniversaryDate {
+    final str = _box.get(_keyAnniversaryDate) as String?;
+    return str != null ? DateTime.tryParse(str) : null;
+  }
+  Future<void> setAnniversaryDate(DateTime? date) async {
+    if (date == null) {
+      await _box.delete(_keyAnniversaryDate);
+    } else {
+      await _box.put(_keyAnniversaryDate, date.toUtc().toIso8601String());
+    }
+  }
+
+  int? get daysTogether => _box.get(_keyDaysTogether) as int?;
+  Future<void> setDaysTogether(int? days) async {
+    if (days == null) {
+      await _box.delete(_keyDaysTogether);
+    } else {
+      await _box.put(_keyDaysTogether, days);
+    }
   }
 
   Future<void> clearAll() async {

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:thae_nge_lay/core/network/websocket_sync_service.dart';
+import 'package:thae_nge_lay/core/storage/local_storage_service.dart';
+import 'package:thae_nge_lay/features/anniversary/presentation/controllers/anniversary_notifier.dart';
 import 'package:thae_nge_lay/features/auth/presentation/controllers/auth_state_notifier.dart';
 import 'package:thae_nge_lay/features/home/presentation/controllers/couple_media_controller.dart';
 import 'package:thae_nge_lay/features/pairing/data/repositories/pairing_repository_impl.dart';
@@ -74,6 +76,11 @@ class PairingController extends _$PairingController {
       final user2 = data['user2Id']?.toString();
       final spaceId = data['id']?.toString();
       final partnerId = user1 == user.id ? user2 : user1;
+      final dateStr = data['anniversaryDate']?.toString() ??
+          data['startDate']?.toString() ??
+          data['pairedAt']?.toString() ??
+          data['createdAt']?.toString();
+      final anniversaryDate = dateStr != null ? DateTime.tryParse(dateStr)?.toUtc() : null;
 
       if (partnerId != null && spaceId != null) {
         _pollTimer?.cancel();
@@ -81,7 +88,12 @@ class PairingController extends _$PairingController {
         await ref.read(authStateProvider.notifier).pairPartner(
               partnerId: partnerId,
               coupleSpaceId: spaceId,
+              anniversaryDate: anniversaryDate,
             );
+        if (anniversaryDate != null) {
+          await ref.read(localStorageServiceProvider).setAnniversaryDate(anniversaryDate);
+        }
+        ref.invalidate(anniversaryProvider);
         await ref.read(coupleMediaProvider.notifier).syncCoupleSummary();
         state = state.copyWith(isPaired: true);
       }
@@ -112,6 +124,11 @@ class PairingController extends _$PairingController {
             final partnerId = data['partnerId']?.toString() ??
                 (spaceMap['user1Id'] == user.id ? spaceMap['user2Id'] : spaceMap['user1Id']);
             final spaceId = spaceMap['id']?.toString();
+            final dateStr = spaceMap['anniversaryDate']?.toString() ??
+                spaceMap['startDate']?.toString() ??
+                spaceMap['pairedAt']?.toString() ??
+                spaceMap['createdAt']?.toString();
+            final anniversaryDate = dateStr != null ? DateTime.tryParse(dateStr)?.toUtc() : null;
 
             if (partnerId != null && spaceId != null) {
               _pollTimer?.cancel();
@@ -119,7 +136,12 @@ class PairingController extends _$PairingController {
               await ref.read(authStateProvider.notifier).pairPartner(
                     partnerId: partnerId,
                     coupleSpaceId: spaceId,
+                    anniversaryDate: anniversaryDate,
                   );
+              if (anniversaryDate != null) {
+                await ref.read(localStorageServiceProvider).setAnniversaryDate(anniversaryDate);
+              }
+              ref.invalidate(anniversaryProvider);
               await ref.read(coupleMediaProvider.notifier).syncCoupleSummary();
               state = state.copyWith(isPaired: true);
             }
@@ -212,11 +234,14 @@ class PairingController extends _$PairingController {
         final partnerId =
             space.user1Id == user.id ? space.user2Id : space.user1Id;
         _pollTimer?.cancel();
+        final annDate = space.anniversaryDate ?? space.pairedAt;
         await ref.read(authStateProvider.notifier).pairPartner(
               partnerId: partnerId,
               coupleSpaceId: space.id,
-              anniversaryDate: space.anniversaryDate,
+              anniversaryDate: annDate,
             );
+        await ref.read(localStorageServiceProvider).setAnniversaryDate(annDate);
+        ref.invalidate(anniversaryProvider);
         await ref.read(coupleMediaProvider.notifier).syncCoupleSummary();
         state = state.copyWith(isLoading: false, isPaired: true);
         return true;

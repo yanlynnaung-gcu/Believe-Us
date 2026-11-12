@@ -25,15 +25,16 @@ class FullBleedCoupleHero extends ConsumerWidget {
     return RepaintBoundary(
       child: Stack(
         children: [
-        // Shared Couple Photo
-        Container(
+        // Shared Couple Photo with disk cache and robust fallback
+        SizedBox(
           height: heroHeight,
           width: double.infinity,
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: getCustomImageProvider(media.coverPhotoPath),
-              fit: BoxFit.cover,
-            ),
+          child: SafeCoupleImage(
+            imagePath: media.coverPhotoPath,
+            width: double.infinity,
+            height: heroHeight,
+            fit: BoxFit.cover,
+            fallbackUrl: kDefaultFallbackImageUrl,
           ),
         ),
 

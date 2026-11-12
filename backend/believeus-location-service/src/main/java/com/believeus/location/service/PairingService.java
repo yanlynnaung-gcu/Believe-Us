@@ -148,6 +148,16 @@ public class PairingService {
         // 6. Create shared CoupleSpace
         String spaceId = "space_" + UUID.randomUUID().toString().substring(0, 8);
         LocalDateTime ldtNow = LocalDateTime.now();
+        LocalDateTime initialAnniversary = ldtNow;
+
+        // Check if either user had already saved an anniversary date in their user profile
+        Optional<UserEntity> targetOpt = userRepository.findById(targetUserId);
+        Optional<UserEntity> currentOpt = userRepository.findById(currentUserId);
+        if (targetOpt.isPresent() && targetOpt.get().getAnniversaryDate() != null) {
+            initialAnniversary = targetOpt.get().getAnniversaryDate();
+        } else if (currentOpt.isPresent() && currentOpt.get().getAnniversaryDate() != null) {
+            initialAnniversary = currentOpt.get().getAnniversaryDate();
+        }
 
         CoupleSpaceEntity entity = CoupleSpaceEntity.builder()
                 .id(spaceId)
@@ -155,7 +165,7 @@ public class PairingService {
                 .user2Id(currentUserId)
                 .inviteCode(normalizedCode)
                 .pairedAt(ldtNow)
-                .anniversaryDate(ldtNow)
+                .anniversaryDate(initialAnniversary)
                 .isActive(true)
                 .build();
 
@@ -227,19 +237,72 @@ public class PairingService {
         UserEntity myUser = userRepository.findById(myId).orElse(null);
         UserEntity partnerUser = userRepository.findById(partnerId).orElse(null);
 
+        LocalDateTime anniversary = space.getAnniversaryDate() != null
+                ? space.getAnniversaryDate()
+                : space.getPairedAt();
+
         long daysTogether = 1;
-        if (space.getAnniversaryDate() != null) {
-            daysTogether = Math.max(1, Duration.between(space.getAnniversaryDate(), LocalDateTime.now()).toDays() + 1);
+        if (anniversary != null) {
+            daysTogether = Math.max(1, java.time.temporal.ChronoUnit.DAYS.between(
+                    anniversary.toLocalDate(),
+                    java.time.LocalDate.now()) + 1);
         }
+
+        LocalDateTime serverNowUtc = LocalDateTime.now(java.time.ZoneOffset.UTC);
 
         return CoupleSummaryResponse.builder()
                 .coupleSpaceId(space.getId())
                 .coverPhotoUrl(space.getCoverPhotoUrl())
-                .anniversaryDate(space.getAnniversaryDate())
+                .anniversaryDate(anniversary)
+                .startDate(anniversary)
+                .pairedAt(space.getPairedAt())
+                .createdAt(space.getPairedAt())
+                .serverTime(serverNowUtc)
                 .daysTogether(daysTogether)
                 .myProfile(UserProfileDto.fromEntity(myUser))
                 .partnerProfile(UserProfileDto.fromEntity(partnerUser))
                 .build();
+    }
+
+    @Transactional
+    public CoupleSummaryResponse updateAnniversaryDate(String coupleSpaceId, LocalDateTime newDate) {
+        CoupleSpaceEntity space = coupleSpaceRepository.findById(coupleSpaceId)
+                .orElseThrow(() -> new IllegalArgumentException("Couple space not found: " + coupleSpaceId));
+        space.setAnniversaryDate(newDate);
+        coupleSpaceRepository.save(space);
+
+        // Also update both users
+        userRepository.findById(space.getUser1Id()).ifPresent(u -> {
+            u.setAnniversaryDate(newDate);
+            userRepository.save(u);
+        });
+        userRepository.findById(space.getUser2Id()).ifPresent(u -> {
+            u.setAnniversaryDate(newDate);
+            userRepository.save(u);
+        });
+
+        long daysTogether = 1;
+        if (newDate != null) {
+            daysTogether = Math.max(1, java.time.temporal.ChronoUnit.DAYS.between(
+                    newDate.toLocalDate(),
+                    java.time.LocalDate.now()) + 1);
+        }
+
+        LocalDateTime serverNowUtc = LocalDateTime.now(java.time.ZoneOffset.UTC);
+
+        Map<String, Object> eventData = Map.of(
+                "coupleSpaceId", coupleSpaceId,
+                "anniversaryDate", newDate != null ? newDate.toString() : "",
+                "startDate", newDate != null ? newDate.toString() : "",
+                "daysTogether", daysTogether,
+                "serverTime", serverNowUtc.toString()
+        );
+        syncWebSocketHandler.broadcastToCoupleSpace(coupleSpaceId, "ANNIVERSARY_UPDATED", eventData);
+        syncWebSocketHandler.broadcastToCoupleTopic(coupleSpaceId, "status", "ANNIVERSARY_UPDATED", eventData);
+
+        log.info("Updated anniversary date for couple space {}: {} (days: {})", coupleSpaceId, newDate, daysTogether);
+
+        return getCoupleSummary(coupleSpaceId, null);
     }
 
     @Transactional

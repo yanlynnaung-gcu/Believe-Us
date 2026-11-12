@@ -47,6 +47,30 @@ class _FakeLocalStorageService extends Fake implements LocalStorageService {
   @override
   Future<void> setLocationPermissionGranted(bool value) async {}
   @override
+  String? get coverPhotoPath => null;
+  @override
+  Future<void> setCoverPhotoPath(String? path) async {}
+  @override
+  String? get partnerAvatarPath => null;
+  @override
+  Future<void> setPartnerAvatarPath(String? path) async {}
+  @override
+  String? get partnerName => null;
+  @override
+  Future<void> setPartnerName(String? name) async {}
+  @override
+  DateTime? get partnerBirthday => null;
+  @override
+  Future<void> setPartnerBirthday(DateTime? date) async {}
+  @override
+  DateTime? get anniversaryDate => null;
+  @override
+  Future<void> setAnniversaryDate(DateTime? date) async {}
+  @override
+  int? get daysTogether => null;
+  @override
+  Future<void> setDaysTogether(int? days) async {}
+  @override
   Future<void> clearAll() async {}
   @override
   Future<void> init() async {}

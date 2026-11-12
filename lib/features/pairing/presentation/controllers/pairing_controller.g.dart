@@ -41,7 +41,7 @@ final class PairingControllerProvider
   }
 }
 
-String _$pairingControllerHash() => r'31c5dc9c9627e393ccd56f717e3fc88f0c3fca33';
+String _$pairingControllerHash() => r'1c39ae57e1f465e92a8c122c1170956caa39ae2b';
 
 abstract class _$PairingController extends $Notifier<PairingUIState> {
   PairingUIState build();

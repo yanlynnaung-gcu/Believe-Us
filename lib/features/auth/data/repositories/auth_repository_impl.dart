@@ -176,6 +176,7 @@ class AuthRepositoryImpl implements AuthRepository {
     String? role,
     DateTime? birthday,
     String? avatarUrl,
+    DateTime? anniversaryDate,
   }) async {
     try {
       final user = await _remoteDataSource.updateProfile(
@@ -184,6 +185,7 @@ class AuthRepositoryImpl implements AuthRepository {
         role: role,
         birthday: birthday,
         avatarUrl: avatarUrl,
+        anniversaryDate: anniversaryDate,
       );
       return Right(user);
     } catch (e) {

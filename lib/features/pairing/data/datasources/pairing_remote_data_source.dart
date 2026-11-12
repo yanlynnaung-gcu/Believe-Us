@@ -16,6 +16,10 @@ abstract interface class PairingRemoteDataSource {
     required String coupleSpaceId,
     String? userId,
   });
+  Future<CoupleSummary> updateAnniversaryDate({
+    required String coupleSpaceId,
+    required DateTime anniversaryDate,
+  });
   Future<void> unpair(String coupleSpaceId);
 }
 
@@ -157,6 +161,32 @@ class PairingRemoteDataSourceImpl implements PairingRemoteDataSource {
     }
 
     throw Exception('Failed to load couple summary: Unexpected response from backend.');
+  }
+
+  @override
+  Future<CoupleSummary> updateAnniversaryDate({
+    required String coupleSpaceId,
+    required DateTime anniversaryDate,
+  }) async {
+    try {
+      final response = await _dio.put(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.couplesPath}/$coupleSpaceId/anniversary',
+        data: {
+          'anniversaryDate': anniversaryDate.toUtc().toIso8601String(),
+          'startDate': anniversaryDate.toUtc().toIso8601String(),
+        },
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return CoupleSummary.fromJson(Map<String, dynamic>.from(response.data as Map));
+      }
+    } on DioException catch (e) {
+      final msg = _extractErrorMessage(e);
+      throw Exception(msg);
+    } catch (e) {
+      throw Exception('Failed to update anniversary date: $e');
+    }
+
+    throw Exception('Failed to update anniversary date.');
   }
 
   @override

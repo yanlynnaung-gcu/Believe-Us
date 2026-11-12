@@ -141,9 +141,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 children: [
                   Opacity(
                     opacity: 0.12,
-                    child: Image(
-                      image: getCustomImageProvider(media.coverPhotoPath),
+                    child: SafeCoupleImage(
+                      imagePath: media.coverPhotoPath,
                       fit: BoxFit.cover,
+                      fallbackUrl: kDefaultFallbackImageUrl,
                     ),
                   ),
                   BackdropFilter(

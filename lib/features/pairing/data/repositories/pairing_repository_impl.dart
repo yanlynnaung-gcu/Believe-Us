@@ -93,6 +93,22 @@ class PairingRepositoryImpl implements PairingRepository {
   }
 
   @override
+  Future<Either<Failure, CoupleSummary>> updateAnniversaryDate({
+    required String coupleSpaceId,
+    required DateTime anniversaryDate,
+  }) async {
+    try {
+      final summary = await _remoteDataSource.updateAnniversaryDate(
+        coupleSpaceId: coupleSpaceId,
+        anniversaryDate: anniversaryDate,
+      );
+      return Right(summary);
+    } catch (e) {
+      return Left(Failure.server(e.toString().replaceAll('Exception: ', '')));
+    }
+  }
+
+  @override
   Future<Either<Failure, void>> unpair(String coupleSpaceId) async {
     try {
       await _remoteDataSource.unpair(coupleSpaceId);

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thae_nge_lay/core/network/api_client.dart';
@@ -59,11 +60,11 @@ void main() {
       expect((provider as FileImage).file.path, tempFile.path);
     });
 
-    test('getCustomImageProvider returns NetworkImage with valid URL for relative backend path', () {
+    test('getCustomImageProvider returns CachedNetworkImageProvider with valid URL for relative backend path', () {
       const relative = '/uploads/avatars/avatar_real.jpg';
       final provider = getCustomImageProvider(relative);
-      expect(provider, isA<NetworkImage>());
-      final netImage = provider as NetworkImage;
+      expect(provider, isA<CachedNetworkImageProvider>());
+      final netImage = provider as CachedNetworkImageProvider;
       expect(netImage.url, '${ApiEndpoints.baseUrl}$relative');
       // Verify no 'file://' host error could happen
       final uri = Uri.parse(netImage.url);
@@ -71,14 +72,27 @@ void main() {
       expect(uri.host.isNotEmpty, isTrue);
     });
 
-    test('getCustomImageProvider returns fallback NetworkImage for empty or null path', () {
+    test('getCustomImageProvider returns fallback CachedNetworkImageProvider for empty or null path', () {
       final providerNull = getCustomImageProvider(null);
-      expect(providerNull, isA<NetworkImage>());
-      expect((providerNull as NetworkImage).url, kDefaultFallbackImageUrl);
+      expect(providerNull, isA<CachedNetworkImageProvider>());
+      expect((providerNull as CachedNetworkImageProvider).url, kDefaultFallbackImageUrl);
 
       final providerEmpty = getCustomImageProvider('');
-      expect(providerEmpty, isA<NetworkImage>());
-      expect((providerEmpty as NetworkImage).url, kDefaultFallbackImageUrl);
+      expect(providerEmpty, isA<CachedNetworkImageProvider>());
+      expect((providerEmpty as CachedNetworkImageProvider).url, kDefaultFallbackImageUrl);
+    });
+
+    testWidgets('SafeCoupleImage widget renders without throwing when given relative or network URL', (tester) async {
+      await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(
+          body: SafeCoupleImage(
+            imagePath: '/uploads/covers/test_cover.jpg',
+            width: 200,
+            height: 200,
+          ),
+        ),
+      ));
+      expect(find.byType(SafeCoupleImage), findsOneWidget);
     });
   });
 }

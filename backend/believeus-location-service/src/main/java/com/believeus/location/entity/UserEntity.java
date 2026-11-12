@@ -42,6 +42,8 @@ public class UserEntity {
     @Column(length = 64)
     private String coupleSpaceId;
 
+    private LocalDateTime anniversaryDate;
+
     private Double lastLatitude;
 
     private Double lastLongitude;

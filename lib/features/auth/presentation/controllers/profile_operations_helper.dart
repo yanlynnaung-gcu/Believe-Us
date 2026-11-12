@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thae_nge_lay/core/storage/local_storage_service.dart';
 import 'package:thae_nge_lay/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:thae_nge_lay/features/auth/presentation/controllers/auth_state_notifier.dart';
 
@@ -88,6 +89,7 @@ class ProfileOperationsHelper {
       role: role ?? user.role,
       birthday: birthday ?? user.birthday,
       avatarUrl: finalPhotoUrl,
+      anniversaryDate: anniversaryDate,
     );
 
     return result.fold(
@@ -100,6 +102,9 @@ class ProfileOperationsHelper {
           anniversaryDate: anniversaryDate ?? updated.anniversaryDate,
           isProfileComplete: true,
         );
+        if (withAnniversary.anniversaryDate != null) {
+          await ref.read(localStorageServiceProvider).setAnniversaryDate(withAnniversary.anniversaryDate);
+        }
         await ref.read(authStateProvider.notifier).setUser(withAnniversary);
         return true;
       },
@@ -112,6 +117,7 @@ class ProfileOperationsHelper {
     String? role,
     DateTime? birthday,
     String? photoUrl,
+    DateTime? anniversaryDate,
     required void Function(String error) onError,
   }) async {
     final user = ref.read(authStateProvider);
@@ -124,6 +130,7 @@ class ProfileOperationsHelper {
       role: role,
       birthday: birthday,
       avatarUrl: photoUrl,
+      anniversaryDate: anniversaryDate,
     );
 
     return result.fold(
@@ -132,7 +139,13 @@ class ProfileOperationsHelper {
         return false;
       },
       (updated) async {
-        await ref.read(authStateProvider.notifier).setUser(updated);
+        final withAnniversary = updated.copyWith(
+          anniversaryDate: anniversaryDate ?? updated.anniversaryDate,
+        );
+        if (withAnniversary.anniversaryDate != null) {
+          await ref.read(localStorageServiceProvider).setAnniversaryDate(withAnniversary.anniversaryDate);
+        }
+        await ref.read(authStateProvider.notifier).setUser(withAnniversary);
         return true;
       },
     );

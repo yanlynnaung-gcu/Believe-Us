@@ -29,9 +29,14 @@ class WdCoupleProfileCard extends StatelessWidget {
         children: [
           Stack(
             children: [
-              CircleAvatar(
-                radius: 28.r,
-                backgroundImage: getCustomImageProvider(userAvatarPath),
+              ClipOval(
+                child: SafeCoupleImage(
+                  imagePath: userAvatarPath,
+                  width: 56.r,
+                  height: 56.r,
+                  fit: BoxFit.cover,
+                  fallbackUrl: kDefaultAvatarBoyfriendUrl,
+                ),
               ),
               Positioned(
                 bottom: -2,

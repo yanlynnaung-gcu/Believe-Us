@@ -62,7 +62,10 @@ class InterlockingDualAvatars extends ConsumerWidget {
                         child: CircleAvatar(
                           radius: 36.r,
                           backgroundImage:
-                              getCustomImageProvider(media.userAvatarPath),
+                              getCustomImageProvider(media.userAvatarPath, defaultFallbackUrl: kDefaultAvatarBoyfriendUrl),
+                          onBackgroundImageError: (err, stack) {
+                            debugPrint('[InterlockingDualAvatars] User avatar error: $err');
+                          },
                         ),
                       ),
                       Positioned(
@@ -121,7 +124,10 @@ class InterlockingDualAvatars extends ConsumerWidget {
                         child: CircleAvatar(
                           radius: 36.r,
                           backgroundImage:
-                              getCustomImageProvider(media.partnerAvatarPath),
+                              getCustomImageProvider(media.partnerAvatarPath, defaultFallbackUrl: kDefaultAvatarGirlfriendUrl),
+                          onBackgroundImageError: (err, stack) {
+                            debugPrint('[InterlockingDualAvatars] Partner avatar error: $err');
+                          },
                         ),
                       ),
                       Positioned(

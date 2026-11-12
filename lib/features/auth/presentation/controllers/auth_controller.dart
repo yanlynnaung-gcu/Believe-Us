@@ -213,6 +213,7 @@ class AuthController extends _$AuthController {
     String? role,
     DateTime? birthday,
     String? photoUrl,
+    DateTime? anniversaryDate,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     final success = await ProfileOperationsHelper.updateProfile(
@@ -221,6 +222,7 @@ class AuthController extends _$AuthController {
       role: role,
       birthday: birthday,
       photoUrl: photoUrl,
+      anniversaryDate: anniversaryDate,
       onError: (err) => state = state.copyWith(errorMessage: err),
     );
     state = state.copyWith(isLoading: false);

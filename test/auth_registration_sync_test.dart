@@ -139,6 +139,7 @@ class MockAuthRepository implements AuthRepository {
     String? role,
     DateTime? birthday,
     String? avatarUrl,
+    DateTime? anniversaryDate,
   }) async {
     return Right(UserProfile(
       id: userId,
@@ -147,6 +148,7 @@ class MockAuthRepository implements AuthRepository {
       role: role ?? 'BOYFRIEND',
       birthday: birthday,
       photoUrl: avatarUrl,
+      anniversaryDate: anniversaryDate,
       isProfileComplete: true,
     ));
   }
@@ -220,6 +222,18 @@ class MockPairingRepository implements PairingRepository {
   }
 
   @override
+  Future<Either<Failure, CoupleSummary>> updateAnniversaryDate({
+    required String coupleSpaceId,
+    required DateTime anniversaryDate,
+  }) async {
+    return Right(CoupleSummary(
+      coupleSpaceId: coupleSpaceId,
+      anniversaryDate: anniversaryDate,
+      daysTogether: 1,
+    ));
+  }
+
+  @override
   Future<Either<Failure, void>> unpair(String coupleSpaceId) async {
     return const Right(null);
   }
@@ -229,6 +243,12 @@ class MockLocalStorageService implements LocalStorageService {
   String? _userId;
   String? _profileJson;
   String? _token;
+  String? _coverPath;
+  String? _partnerAvatar;
+  String? _partnerName;
+  DateTime? _partnerBday;
+  DateTime? _annDate;
+  int? _daysTogether;
 
   @override
   bool get isOnboardingCompleted => true;
@@ -254,6 +274,30 @@ class MockLocalStorageService implements LocalStorageService {
   String getDeviceId() => 'dev_mock_test_001';
   @override
   String getDeviceName() => 'Mock Test Device';
+  @override
+  String? get coverPhotoPath => _coverPath;
+  @override
+  Future<void> setCoverPhotoPath(String? path) async => _coverPath = path;
+  @override
+  String? get partnerAvatarPath => _partnerAvatar;
+  @override
+  Future<void> setPartnerAvatarPath(String? path) async => _partnerAvatar = path;
+  @override
+  String? get partnerName => _partnerName;
+  @override
+  Future<void> setPartnerName(String? name) async => _partnerName = name;
+  @override
+  DateTime? get partnerBirthday => _partnerBday;
+  @override
+  Future<void> setPartnerBirthday(DateTime? date) async => _partnerBday = date;
+  @override
+  DateTime? get anniversaryDate => _annDate;
+  @override
+  Future<void> setAnniversaryDate(DateTime? date) async => _annDate = date;
+  @override
+  int? get daysTogether => _daysTogether;
+  @override
+  Future<void> setDaysTogether(int? days) async => _daysTogether = days;
   @override
   Future<void> clearAll() async {}
   @override

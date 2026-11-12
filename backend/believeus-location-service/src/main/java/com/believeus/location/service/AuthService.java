@@ -1,9 +1,11 @@
 package com.believeus.location.service;
 
+import com.believeus.location.entity.CoupleSpaceEntity;
 import com.believeus.location.entity.EmailOtpEntity;
 import com.believeus.location.entity.UserEntity;
 import com.believeus.location.model.LoginTicket;
 import com.believeus.location.model.dto.*;
+import com.believeus.location.repository.CoupleSpaceRepository;
 import com.believeus.location.repository.EmailOtpRepository;
 import com.believeus.location.repository.UserRepository;
 import com.believeus.location.websocket.SyncWebSocketHandler;
@@ -24,6 +26,7 @@ import java.util.UUID;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final CoupleSpaceRepository coupleSpaceRepository;
     private final EmailOtpRepository emailOtpRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
@@ -394,6 +397,41 @@ public class AuthService {
 
         if (updates.containsKey("avatarUrl")) {
             user.setAvatarUrl((String) updates.get("avatarUrl"));
+        }
+
+        if (updates.containsKey("anniversaryDate") || updates.containsKey("startDate")) {
+            Object aDate = updates.containsKey("anniversaryDate") ? updates.get("anniversaryDate") : updates.get("startDate");
+            if (aDate instanceof String str && !str.isBlank()) {
+                try {
+                    LocalDateTime parsed;
+                    if (str.endsWith("Z")) {
+                        parsed = java.time.Instant.parse(str).atZone(java.time.ZoneOffset.UTC).toLocalDateTime();
+                    } else if (str.contains("T")) {
+                        parsed = LocalDateTime.parse(str.substring(0, Math.min(str.length(), 19)));
+                    } else {
+                        parsed = LocalDate.parse(str.substring(0, 10)).atStartOfDay();
+                    }
+                    user.setAnniversaryDate(parsed);
+
+                    if (user.getCoupleSpaceId() != null) {
+                        coupleSpaceRepository.findById(user.getCoupleSpaceId()).ifPresent(cs -> {
+                            cs.setAnniversaryDate(parsed);
+                            coupleSpaceRepository.save(cs);
+                            long days = Math.max(1, java.time.temporal.ChronoUnit.DAYS.between(parsed.toLocalDate(), LocalDate.now()) + 1);
+                            LocalDateTime nowUtc = LocalDateTime.now(java.time.ZoneOffset.UTC);
+                            Map<String, Object> eventData = Map.of(
+                                    "coupleSpaceId", cs.getId(),
+                                    "anniversaryDate", parsed.toString(),
+                                    "startDate", parsed.toString(),
+                                    "daysTogether", days,
+                                    "serverTime", nowUtc.toString()
+                            );
+                            syncWebSocketHandler.broadcastToCoupleSpace(cs.getId(), "ANNIVERSARY_UPDATED", eventData);
+                            syncWebSocketHandler.broadcastToCoupleTopic(cs.getId(), "status", "ANNIVERSARY_UPDATED", eventData);
+                        });
+                    }
+                } catch (Exception ignored) {}
+            }
         }
 
         if (updates.containsKey("fcmToken")) {

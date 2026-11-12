@@ -36,6 +36,37 @@ class _AnniversaryScreenState extends ConsumerState<AnniversaryScreen> {
     );
   }
 
+  Future<void> _editAnniversaryDate() async {
+    final state = ref.read(anniversaryProvider);
+    final initialDate = state.officialStartDate ?? DateTime.now();
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate.isAfter(DateTime.now()) ? DateTime.now() : initialDate,
+      firstDate: DateTime(1970),
+      lastDate: DateTime.now(),
+      helpText: 'Select Couple Official Start Date',
+    );
+
+    if (picked != null) {
+      final success = await ref
+          .read(anniversaryProvider.notifier)
+          .updateAnniversaryDate(picked);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              success
+                  ? 'Official anniversary date synced with partner! ❤️'
+                  : 'Failed to update anniversary date.',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(anniversaryProvider);
@@ -49,6 +80,11 @@ class _AnniversaryScreenState extends ConsumerState<AnniversaryScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_calendar_rounded, color: BelieveColors.primary),
+            tooltip: 'Edit Start Date',
+            onPressed: _editAnniversaryDate,
+          ),
           IconButton(
             icon: const Icon(Icons.add_rounded, color: BelieveColors.primary),
             onPressed: _openAddMilestoneSheet,
@@ -64,7 +100,10 @@ class _AnniversaryScreenState extends ConsumerState<AnniversaryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    WdAnniversaryDaysBanner(daysTogether: state.daysTogether),
+                    WdAnniversaryDaysBanner(
+                      daysTogether: state.daysTogether,
+                      onTapEditDate: _editAnniversaryDate,
+                    ),
                     SizedBox(height: 24.h),
                     Text(
                       'Couple Milestones & Memories',
